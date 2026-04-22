@@ -98,6 +98,9 @@ celerybeat.pid
 # Environments
 .env
 .venv
+
+.github/
+current_progress.md
 env/
 venv/
 ENV/
