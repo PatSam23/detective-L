@@ -1,4 +1,4 @@
-# Byte-compiled / optimized / DLL files
+﻿# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
@@ -129,3 +129,4 @@ dmypy.json
 *.swo
 *~
 .DS_Store
+plan.md
