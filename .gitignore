@@ -6,6 +6,8 @@ __pycache__/
 # C extensions
 *.so
 
+#github copilot agent files
+.github
 # Distribution / packaging
 .Python
 build/
@@ -49,11 +51,8 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
+# Logs
+logs/
 *.log
 local_settings.py
 db.sqlite3
@@ -99,8 +98,6 @@ celerybeat.pid
 .env
 .venv
 
-.github/
-current_progress.md
 env/
 venv/
 ENV/
@@ -132,4 +129,3 @@ dmypy.json
 *.swo
 *~
 .DS_Store
-plan.md
