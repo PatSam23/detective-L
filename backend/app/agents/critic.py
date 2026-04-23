@@ -99,23 +99,25 @@ def critic_node(state: AgentState) -> dict:
             "sources": formatted_sources
         })
         
-        num_claims = len(result.claims)
-        low_confidence = sum(1 for c in result.claims if c.confidence < 0.6)
-        avg_confidence = sum(c.confidence for c in result.claims) / num_claims if num_claims > 0 else 0
+        # Result is a dict from JsonOutputParser
+        claims = result.get('claims', [])
+        num_claims = len(claims)
+        low_confidence = sum(1 for c in claims if c.get('confidence', 1) < 0.6)
+        avg_confidence = sum(c.get('confidence', 1) for c in claims) / num_claims if num_claims > 0 else 0
         
         logger.info(f"Analyzed {num_claims} claims")
         logger.info(f"Average confidence: {avg_confidence:.2f}, Low confidence: {low_confidence}/{num_claims}")
         
         # Log individual claims at debug level
-        claims_summary = [f"{c.text[:50]}... ({c.confidence:.2f})" for c in result.claims]
+        claims_summary = [f"{c.get('text', '')[:50]}... ({c.get('confidence', 1):.2f})" for c in claims]
         logger.debug(f"Individual claims: {claims_summary}") 
         
         # Can only revise up to 2 times
-        needs_revision = result.needs_revision and state["revision_count"] < 2
-        logger.info(f"Needs revision: {needs_revision} (result.needs_revision={result.needs_revision})")
+        needs_revision = result.get('needs_revision', False) and state["revision_count"] < 2
+        logger.info(f"Needs revision: {needs_revision} (result.needs_revision={result.get('needs_revision', False)})")
         
         return {
-            "fact_check_results": [c.dict() for c in result.claims],
+            "fact_check_results": claims,
             "needs_revision": needs_revision,
             "revision_count": state["revision_count"] + 1,
         }

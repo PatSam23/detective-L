@@ -52,11 +52,20 @@ def web_research_agent(state: dict) -> dict:
     Returns:
         Dictionary with "research_findings" to append to state
     """
-    subtopic = state.get("subtopic", "")
+    subtopic_val = state.get("subtopic", "")
     original_query = state.get("original_query", "")
-    search_query = f"{original_query} — {subtopic}"
     
-    logger.info(f"Searching subtopic: {subtopic}")
+    # subtopic might be a dict with title and description if it comes from the planner
+    if isinstance(subtopic_val, dict):
+        subtopic_title = subtopic_val.get("title", str(subtopic_val))
+    else:
+        subtopic_title = str(subtopic_val)
+        
+    search_query = f"{original_query} — {subtopic_title}"
+    if len(search_query) > 350:
+        search_query = search_query[:350]
+    
+    logger.info(f"Searching subtopic: {subtopic_title}")
     logger.debug(f"Full search query: {search_query}")
     
     try:
@@ -68,10 +77,10 @@ def web_research_agent(state: dict) -> dict:
         )
         
         num_results = len(results.get('results', []))
-        logger.info(f"Found {num_results} results for {subtopic}")
+        logger.info(f"Found {num_results} results for {subtopic_title}")
         
         finding = {
-            "subtopic": subtopic,
+            "subtopic": subtopic_val,
             "data": results,
             "agent_type": "web_search",
         }
@@ -79,9 +88,9 @@ def web_research_agent(state: dict) -> dict:
         return {"research_findings": [finding]}
     
     except Exception as e:
-        logger.error(f"Error searching for {subtopic}: {str(e)}", exc_info=True)
+        logger.error(f"Error searching for {subtopic_title}: {str(e)}", exc_info=True)
         finding = {
-            "subtopic": subtopic,
+            "subtopic": subtopic_val,
             "data": {"results": [], "error": str(e)},
             "agent_type": "web_search_error",
         }
