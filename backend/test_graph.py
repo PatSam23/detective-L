@@ -5,6 +5,7 @@ This script demonstrates how to use the research_app and run_research function.
 """
 
 import sys
+import json
 sys.path.insert(0, "/")
 
 from app.core.graph import run_research
@@ -13,7 +14,9 @@ from app.core.graph import run_research
 def test_research():
     """Test the research pipeline with a sample query."""
     
-    query = "What are the latest trends in AI-powered drug discovery in 2026?"
+    # query = "Best Features of the Samsung Galaxy S24"
+    query = "I can afford an emi of 3.5k rs per month, I want to buy the iphone 17 in this year's flipkart big billion day sale, tell me features of iphone 17, and tell me how many months will it take to repay the emi"
+    
     
     print("\n" + "="*70)
     print("RESEARCH GRAPH TEST")
@@ -41,8 +44,14 @@ def test_research():
             
             if final_report.get('sections'):
                 print(f"\n📌 Sections:")
-                for i, section in enumerate(final_report['sections'][:3], 1):
-                    print(f"   {i}. {section.get('title', 'Untitled')}")
+                for i, section in enumerate(final_report['sections'], 1):
+                    print(f"\n   --- {i}. {section.get('title', 'Untitled')} ---")
+                    print(f"      {section.get('content', 'No content attached.')}")
+            
+            print("\n" + "="*70)
+            print("FULL FINAL REPORT JSON")
+            print("="*70)
+            print(json.dumps(final_report, indent=2))
         
         print("\n" + "="*70 + "\n")
         
