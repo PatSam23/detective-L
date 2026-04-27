@@ -1,8 +1,8 @@
 # Current Progress
 
 ## Overview
-**Current Phase:** Week 1 — Backend Core (Days 1-4)  
-**Status:** Core Agent Pipeline Built + Logging System + Architecture Validated ✅
+**Current Phase:** Week 2 — Streaming API
+**Status:** Core Agent Pipeline Built + API Endpoints & Streaming Implemented ✅
 
 ## Already Developed
 - *Workspace scaffolding:* Initialized `backend/` and `frontend/` folders based on Edith architectural review.
@@ -35,28 +35,19 @@
   - `backend/LOGGING.md`: Complete logging documentation and usage guide
 - **Architecture Validation** ✅ NEW
   - `backend/test_graph_mock.py`: Mock test validates entire 7-agent pipeline without external API calls
-  - Test Results:
-    - ✅ Planner: Generated 4 subtopics
-    - ✅ Web Researchers: Spawned 4 parallel agents
-    - ✅ Synthesis: Merged findings into 922-char draft
-    - ✅ Critic: Fact-checked 5 claims with confidence scoring
-    - ✅ Routing: Conditional logic triggered revision at 0.65 confidence
-    - ✅ Formatter: Created final report with 4 sections, 3 sources
-    - ✅ State Flow: AgentState successfully propagated through all 7 nodes
-  - `backend/TEST_RESULTS.md`: Comprehensive test documentation
+  - `backend/test_graph.py`: Validated full pipeline dynamically with real API calls through Gemini and Tavily.
+- **FastAPI Endpoints (Week 2 API Stabilization)** ✅ NEW
+  - `backend/main.py`: Created production entrypoint with CORS via Uvicorn.
+  - Implemented `/health` endpoint to ensure server uptime.
+  - Implemented `/research` synchronous POST endpoint triggering global pipeline wait-for-completion.
+  - Implemented `/research/stream` POST endpoint utilizing LangGraph's `.astream(stream_mode="updates")` to broadcast node completions via Server-Sent Events (SSE).
 
 ## Bugs / Needs Attention
-- **API Credential Issue:** Gemini API key restricted (403 PERMISSION_DENIED). 
-  - **Workaround:** Mock test validates architecture without live calls
-  - **Resolution:** Use valid production credentials for real testing
+- None currently.
 
 ## What is Next
-- **Obtain Valid API Credentials:** Get unrestricted Gemini API access
-- **Run Real End-to-End Test:** Execute `test_graph.py` with valid credentials to test actual LLM and web search
-- **Build FastAPI Endpoints:** Create `/research` and `/research/stream` endpoints (Week 2)
-- **Implement Streaming:** Server-Sent Events for real-time agent progress monitoring
-- **Setup LangSmith Integration:** Connect LangSmith for observability and evaluation
-- **Frontend Dashboard:** Build Next.js UI for real-time research visualization
+- **Setup LangSmith Integration:** Connect LangSmith observability toggles through environment variables for precise execution tracing and evaluation.
+- **Frontend Dashboard (Week 3):** Build Next.js UI using `useResearch` Hook to subscribe to SSE real-time streaming endpoint for tracking research visualizations dynamically.
 
 ## Test Results Summary
 All architecture components validated successfully through mock testing:
@@ -64,7 +55,7 @@ All architecture components validated successfully through mock testing:
 - **Type System:** ✅ All Pydantic models and TypedDict working
 - **State Management:** ✅ State flows correctly through all agents
 - **Error Handling:** ✅ Logging and error catching in place
-- **API Integration:** ⏳ Needs valid credentials (mock test passed)
+- **API Integration:** ✅ API credentials confirmed working
 
 # for my reference:
 Dependency	Purpose	In detective-L

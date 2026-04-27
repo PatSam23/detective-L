@@ -183,17 +183,17 @@ async def arun_research(query: str, verbose: bool = True) -> dict:
         raise
 
 
-def stream_research(query: str):
+async def astream_research(query: str):
     """
-    Stream research progress events for real-time UI updates.
+    Async stream research progress events for real-time UI updates via SSE.
     
     Args:
         query: User's research query
     
     Yields:
-        Event dictionaries with progress information
+        Event dictionaries with progress information from the graph's nodes
     """
-    logger.info(f"Starting stream research: {query}")
+    logger.info(f"Starting async stream research: {query}")
     
     initial_state = {
         "query": query,
@@ -209,13 +209,14 @@ def stream_research(query: str):
     
     try:
         event_count = 0
-        for event in research_app.stream(initial_state):
+        # astream enables async streaming of node updates
+        async for event in research_app.astream(initial_state, stream_mode="updates"):
             event_count += 1
-            logger.debug(f"Stream event {event_count}: {str(event)[:100]}")
+            logger.debug(f"Async stream event {event_count}: {str(event)[:100]}")
             yield event
         
-        logger.info(f"Stream research completed with {event_count} events")
+        logger.info(f"Async stream research completed with {event_count} events")
     
     except Exception as e:
-        logger.error(f"Stream research failed: {str(e)}", exc_info=True)
+        logger.error(f"Async stream research failed: {str(e)}", exc_info=True)
         raise
