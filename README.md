@@ -9,7 +9,7 @@
 - **Critic Agent:** Fact-checks claims, scores confidence, flags uncertainty.
 - **Revisor Agent:** Automatically revises based on the Critic's instructions (loops max 2 times).
 
-## Tech Stack
+## Tech Stack 
 ### Backend
 - **LangGraph** — multi-agent orchestration, state, cycles
 - **LangChain** — LLM calls, RAG, tools, prompts
