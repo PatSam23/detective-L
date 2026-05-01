@@ -110,10 +110,14 @@ def fan_out_to_web_researchers(state: AgentState):
     Returns:
         List of Send() objects, one per subtopic
     """
-    from langgraph.constants import Send
+    from langgraph.types import Send
     
     num_subtopics = len(state['subtopics'])
     logger.info(f"Spawning {num_subtopics} parallel web researchers")
+    
+    if not state['subtopics']:
+        logger.warning("No subtopics generated, returning empty list")
+        return []
     
     return [
         Send(

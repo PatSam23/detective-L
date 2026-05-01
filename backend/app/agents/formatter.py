@@ -124,7 +124,7 @@ def formatter_node(state: AgentState) -> dict:
             "sections": [
                 {
                     "title": "Research Findings",
-                    "content": state["draft_report"]
+                    "key_points": state["draft_report"].split(".")[:5]  # Split into key points
                 }
             ],
             "confidence_score": confidence_score,

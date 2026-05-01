@@ -77,10 +77,23 @@ async def stream_research_events(request: ResearchRequest):
             async for event in astream_research(request.query):
                 # Format as SSE
                 for node_name, state_update in event.items():
+                    # Filter out large/non-serializable data from state_update
+                    filtered_update = {}
+                    for key, value in state_update.items():
+                        # Skip large lists like research_findings to avoid payload bloat
+                        if key in ["research_findings", "draft_report"] and isinstance(value, (list, str)):
+                            filtered_update[key] = f"<{key}>{len(value)} items" if isinstance(value, list) else f"<{key}>{len(value)} chars"
+                        else:
+                            try:
+                                json.dumps(value)  # Test serializability
+                                filtered_update[key] = value
+                            except (TypeError, ValueError):
+                                filtered_update[key] = str(value)
+                    
                     payload = {
                         "type": "agent_update",
                         "name": node_name,
-                        "data": state_update # Send minimal data or filter large payload if needed
+                        "data": filtered_update
                     }
                     yield f"data: {json.dumps(payload)}\n\n"
                     
@@ -88,7 +101,7 @@ async def stream_research_events(request: ResearchRequest):
             yield f"data: {json.dumps({'type': 'research_complete'})}\n\n"
             
         except Exception as e:
-            logger.error(f"Streaming error: {e}")
+            logger.error(f"Streaming error: {e}", exc_info=True)
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(generate_events(), media_type="text/event-stream")
