@@ -23,7 +23,7 @@ export function ResearchForm({ onSubmit, isLoading }: ResearchFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="query" className="block text-sm font-medium text-gray-300 mb-2">
+        <label htmlFor="query" className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
           Research Query
         </label>
         <textarea
@@ -32,7 +32,7 @@ export function ResearchForm({ onSubmit, isLoading }: ResearchFormProps) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Enter your research topic (e.g., 'Competitive landscape of EV battery technology in India')"
           disabled={isLoading}
-          className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           rows={4}
         />
       </div>
@@ -40,7 +40,7 @@ export function ResearchForm({ onSubmit, isLoading }: ResearchFormProps) {
       <button
         type="submit"
         disabled={isLoading || !query.trim()}
-        className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 disabled:scale-100"
+        className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 hover:from-blue-600 hover:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-800 disabled:from-slate-400 disabled:to-slate-500 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 disabled:scale-100"
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">

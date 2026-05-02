@@ -24,7 +24,7 @@ export function ReportDisplay({ reportContent, isGenerating }: ReportDisplayProp
 
   if (!reportContent && !isGenerating) {
     return (
-      <div className="p-6 bg-slate-700 rounded-lg border border-slate-600 text-center text-gray-400">
+      <div className="p-6 bg-slate-100 dark:bg-slate-700 rounded-lg border border-slate-300 dark:border-slate-600 text-center text-slate-600 dark:text-gray-400">
         <p>📄 Report will appear here as agents complete their work</p>
       </div>
     );
@@ -36,7 +36,7 @@ export function ReportDisplay({ reportContent, isGenerating }: ReportDisplayProp
         {/* Title */}
         {parsedReport.title && (
           <div>
-            <h2 className="text-2xl font-bold text-white mb-2">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
               {parsedReport.title}
             </h2>
           </div>
@@ -45,8 +45,8 @@ export function ReportDisplay({ reportContent, isGenerating }: ReportDisplayProp
         {/* Summary */}
         {parsedReport.summary && (
           <div>
-            <h3 className="text-lg font-semibold text-blue-400 mb-2">Summary</h3>
-            <p className="text-gray-300 leading-relaxed">
+            <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">Summary</h3>
+            <p className="text-slate-700 dark:text-gray-300 leading-relaxed">
               {parsedReport.summary}
             </p>
           </div>
@@ -55,12 +55,12 @@ export function ReportDisplay({ reportContent, isGenerating }: ReportDisplayProp
         {/* Key Findings */}
         {parsedReport.key_findings && parsedReport.key_findings.length > 0 && (
           <div>
-            <h3 className="text-lg font-semibold text-blue-400 mb-2">Key Findings</h3>
+            <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">Key Findings</h3>
             <ul className="space-y-2">
               {parsedReport.key_findings.map((finding, idx) => (
                 <li key={idx} className="flex gap-3">
-                  <span className="text-green-400 font-bold">✓</span>
-                  <span className="text-gray-300">{finding}</span>
+                  <span className="text-green-600 dark:text-green-400 font-bold">✓</span>
+                  <span className="text-slate-700 dark:text-gray-300">{finding}</span>
                 </li>
               ))}
             </ul>
@@ -70,8 +70,8 @@ export function ReportDisplay({ reportContent, isGenerating }: ReportDisplayProp
         {/* Analysis */}
         {parsedReport.analysis && (
           <div>
-            <h3 className="text-lg font-semibold text-blue-400 mb-2">Analysis</h3>
-            <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+            <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">Analysis</h3>
+            <p className="text-slate-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
               {parsedReport.analysis}
             </p>
           </div>
@@ -80,27 +80,27 @@ export function ReportDisplay({ reportContent, isGenerating }: ReportDisplayProp
         {/* Claims with Confidence */}
         {parsedReport.claims && parsedReport.claims.length > 0 && (
           <div>
-            <h3 className="text-lg font-semibold text-blue-400 mb-2">Verified Claims</h3>
+            <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">Verified Claims</h3>
             <div className="space-y-2">
               {parsedReport.claims.map((claim, idx) => (
                 <div
                   key={idx}
                   className={`p-3 rounded-lg border ${
                     claim.flagged
-                      ? "bg-red-900/20 border-red-600"
-                      : "bg-green-900/20 border-green-600"
+                      ? "bg-red-100 dark:bg-red-900/20 border-red-300 dark:border-red-600"
+                      : "bg-green-100 dark:bg-green-900/20 border-green-300 dark:border-green-600"
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <p className="text-gray-300 flex-1">{claim.text}</p>
+                    <p className="text-slate-700 dark:text-gray-300 flex-1">{claim.text}</p>
                     <div className="ml-4 text-right">
                       <span
                         className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
                           claim.confidence > 0.8
-                            ? "bg-green-600 text-white"
+                            ? "bg-green-500 dark:bg-green-600 text-white"
                             : claim.confidence > 0.6
-                            ? "bg-yellow-600 text-white"
-                            : "bg-red-600 text-white"
+                            ? "bg-yellow-500 dark:bg-yellow-600 text-white"
+                            : "bg-red-500 dark:bg-red-600 text-white"
                         }`}
                       >
                         {(claim.confidence * 100).toFixed(0)}%
@@ -108,7 +108,7 @@ export function ReportDisplay({ reportContent, isGenerating }: ReportDisplayProp
                     </div>
                   </div>
                   {claim.flagged && (
-                    <p className="text-xs text-red-300 mt-1">⚠️ Requires further verification</p>
+                    <p className="text-xs text-red-600 dark:text-red-300 mt-1">⚠️ Requires further verification</p>
                   )}
                 </div>
               ))}
@@ -119,10 +119,10 @@ export function ReportDisplay({ reportContent, isGenerating }: ReportDisplayProp
         {/* Sources */}
         {parsedReport.sources && parsedReport.sources.length > 0 && (
           <div>
-            <h3 className="text-lg font-semibold text-blue-400 mb-2">Sources</h3>
+            <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">Sources</h3>
             <ul className="space-y-1">
               {parsedReport.sources.map((source, idx) => (
-                <li key={idx} className="text-sm text-blue-300 truncate">
+                <li key={idx} className="text-sm text-blue-500 dark:text-blue-300 truncate">
                   {idx + 1}. {source}
                 </li>
               ))}
@@ -132,16 +132,16 @@ export function ReportDisplay({ reportContent, isGenerating }: ReportDisplayProp
 
         {/* Confidence Score */}
         {parsedReport.confidence_score !== undefined && (
-          <div className="p-4 bg-slate-700 rounded-lg border border-slate-600">
+          <div className="p-4 bg-slate-100 dark:bg-slate-700 rounded-lg border border-slate-300 dark:border-slate-600">
             <div className="flex items-center justify-between">
-              <span className="text-gray-300">Overall Confidence</span>
+              <span className="text-slate-700 dark:text-gray-300">Overall Confidence</span>
               <span
                 className={`text-lg font-bold ${
                   parsedReport.confidence_score > 0.8
-                    ? "text-green-400"
+                    ? "text-green-600 dark:text-green-400"
                     : parsedReport.confidence_score > 0.6
-                    ? "text-yellow-400"
-                    : "text-red-400"
+                    ? "text-yellow-600 dark:text-yellow-400"
+                    : "text-red-600 dark:text-red-400"
                 }`}
               >
                 {(parsedReport.confidence_score * 100).toFixed(1)}%
@@ -155,8 +155,8 @@ export function ReportDisplay({ reportContent, isGenerating }: ReportDisplayProp
 
   // Plain text report (streaming)
   return (
-    <div className="p-6 bg-slate-700 rounded-lg border border-slate-600 max-h-[600px] overflow-y-auto">
-      <p className="text-gray-300 whitespace-pre-wrap font-mono text-sm leading-relaxed">
+    <div className="p-6 bg-slate-100 dark:bg-slate-700 rounded-lg border border-slate-300 dark:border-slate-600 max-h-[600px] overflow-y-auto">
+      <p className="text-slate-700 dark:text-gray-300 whitespace-pre-wrap font-mono text-sm leading-relaxed">
         {reportContent}
         {isGenerating && <span className="animate-pulse">▊</span>}
       </p>
