@@ -42,20 +42,50 @@
   - Implemented `/research` synchronous POST endpoint triggering global pipeline wait-for-completion.
   - Implemented `/research/stream` POST endpoint utilizing LangGraph's `.astream(stream_mode="updates")` to broadcast node completions via Server-Sent Events (SSE).
 - **Next.js Frontend Dashboard (Week 3)** ✅ NEW
-  - `frontend/app/layout.tsx`: Root layout with metadata and styling
-  - `frontend/app/page.tsx`: Main dashboard page with 3-column grid layout
-  - `frontend/app/globals.css`: Tailwind CSS with custom styling
-  - `frontend/hooks/useResearch.ts`: Custom hook managing SSE streaming, agent state, and report accumulation
-  - `frontend/components/ResearchForm.tsx`: Query input textarea with submit button
-  - `frontend/components/AgentStatus.tsx`: Real-time agent progress tracking with status icons and progress bars
-  - `frontend/components/ReportDisplay.tsx`: Dual-mode report rendering (JSON structured + plain text streaming)
-  - `frontend/types/index.ts`: TypeScript definitions for all types
-  - `frontend/package.json`, `tsconfig.json`, `next.config.js`: Build configuration
-  - `frontend/tailwind.config.js`, `postcss.config.js`: CSS tooling setup
-  - `frontend/.env.local.example`: Environment template for API URL configuration
+  - `frontend/app/layout.tsx`: Root layout with metadata, dark/light theme support, and global styling
+  - `frontend/app/page.tsx`: Main dashboard page with responsive 3-column layout (form → agents → report)
+    - Header with theme toggle and connection status indicator
+    - Gradient background styling for light/dark modes
+  - `frontend/app/globals.css`: Tailwind CSS with custom styling and theme variables
+  - `frontend/hooks/useResearch.ts`: Custom hook managing:
+    - SSE EventSource streaming from `/research/stream` endpoint
+    - Agent state updates (pending → running → complete)
+    - Real-time report token accumulation
+    - Error handling and connection management
+  - `frontend/hooks/useTheme.ts`: Theme persistence (localStorage-based dark/light mode)
+  - `frontend/components/ResearchForm.tsx`: Query input with:
+    - Textarea for research queries
+    - Form validation (min 5 chars, max length)
+    - Loading state feedback
+    - Disabled state during research
+  - `frontend/components/AgentStatus.tsx`: Real-time agent progress with:
+    - 6 agents: Planner → Web Researchers → Synthesis → Critic → Revisor → Formatter
+    - Status icons (⭕ pending, 🔄 running, ✅ complete, ❌ error)
+    - Agent descriptions and progress bars
+    - Color-coded status (slate/blue/green/red)
+  - `frontend/components/ReportDisplay.tsx`: Dual-mode report rendering:
+    - JSON parsing for structured reports (title, summary, findings, analysis)
+    - Plain text fallback for streaming content
+    - Scrollable container with confidence scores
+    - Source citation display
+  - `frontend/types/index.ts`: TypeScript definitions:
+    - `ResearchRequest`, `ResearchResponse`
+    - `FinalReport`, `Claim`, `AgentStatus`, `StreamEvent` types
+  - `frontend/package.json`: Dependencies configured (Next.js 14+, Tailwind, TypeScript)
+  - `frontend/tsconfig.json`: TypeScript configuration with path aliases (@/*)
+  - `frontend/next.config.js`: Next.js production build settings
+  - `frontend/tailwind.config.js`: Tailwind CSS with custom color schemes
+  - `frontend/postcss.config.js`: PostCSS configuration for Tailwind
+  - `frontend/.env.local.example`: Environment template showing API_URL configuration
 
 ## Bugs / Needs Attention
-- None currently. Full end-to-end integration tested and working!
+- ✅ FIXED: Type mismatch between backend FinalReport model and frontend expectations
+  - Backend was generating: `executive_summary`, `sections` (dict array)
+  - Frontend expected: `summary`, `key_findings` (string array), `analysis`
+  - Updated FinalReport Pydantic model to match frontend types
+  - Updated formatter prompt and output generation
+  - Fixed fallback report structure
+  - Added claims to final report output
 
 ## What is Next
 - **Week 4 Polish (Final Week):** Docker Compose setup for one-command deployment, LangSmith integration for observability/evaluation, final comprehensive README with architecture diagrams

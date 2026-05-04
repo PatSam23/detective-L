@@ -52,14 +52,14 @@ class FinalReport(BaseModel):
     """The final structured intelligence report output."""
     
     title: str = Field(description="Report title")
-    executive_summary: str = Field(description="High-level overview")
-    sections: List[dict] = Field(description="Structured report sections")
+    summary: str = Field(description="Executive summary/overview")
+    key_findings: List[str] = Field(description="List of key findings")
+    analysis: str = Field(description="Detailed analysis")
     confidence_score: float = Field(
         ge=0.0, 
         le=1.0, 
         description="Overall confidence of the report"
     )
     sources: List[str] = Field(description="All sources cited")
-    revision_count: int = Field(
-        description="Number of times the report was revised"
-    )
+    claims: List[Claim] = Field(default_factory=list, description="Claims with confidence scores")
+    revision_count: int = Field(default=0, description="Number of times the report was revised")

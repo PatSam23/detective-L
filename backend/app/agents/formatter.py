@@ -49,10 +49,10 @@ formatter_prompt = ChatPromptTemplate.from_messages([
 
 1. Take the draft report text
 2. Extract a clear, concise TITLE (max 80 chars)
-3. Write an EXECUTIVE SUMMARY (2-3 sentences)
-4. Structure the report into 3-5 major SECTIONS
-5. Each section should have a title and key points
-6. Format as JSON with "title", "executive_summary", and "sections" fields"""),
+3. Write a SUMMARY (2-3 sentences)
+4. Extract 3-5 KEY_FINDINGS as a list
+5. Write a detailed ANALYSIS (1-2 paragraphs)
+6. Format as JSON with "title", "summary", "key_findings" (array), and "analysis" fields"""),
     ("human", "{report}")
 ])
 
@@ -97,10 +97,12 @@ def formatter_node(state: AgentState) -> dict:
         # Build final report dict
         final_report = {
             "title": result.get("title", "Research Report"),
-            "executive_summary": result.get("executive_summary", ""),
-            "sections": result.get("sections", []),
+            "summary": result.get("summary", ""),
+            "key_findings": result.get("key_findings", []),
+            "analysis": result.get("analysis", ""),
             "confidence_score": confidence_score,
             "sources": sources,
+            "claims": state.get("fact_check_results", []),
             "revision_count": revision_count,
         }
         
@@ -118,17 +120,15 @@ def formatter_node(state: AgentState) -> dict:
         logger.info("Using fallback report structure")
         
         # Fallback to simple structure
+        key_findings = [s.strip() for s in state["draft_report"].split(".")[:5] if s.strip()]
         final_report = {
             "title": state["query"][:80],
-            "executive_summary": state["draft_report"][:200],
-            "sections": [
-                {
-                    "title": "Research Findings",
-                    "key_points": state["draft_report"].split(".")[:5]  # Split into key points
-                }
-            ],
+            "summary": state["draft_report"][:200],
+            "key_findings": key_findings,
+            "analysis": state["draft_report"],
             "confidence_score": confidence_score,
             "sources": sources,
+            "claims": state.get("fact_check_results", []),
             "revision_count": revision_count,
         }
         
