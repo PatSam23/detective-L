@@ -116,12 +116,24 @@ export function useResearch(): UseResearchReturn {
 
   const handleStreamEvent = useCallback((event: StreamEvent) => {
     switch (event.type) {
-      case "agent_update":
-        // Update agent status
+      case "agent_start":
+        // Agent starting - mark as running
         if (event.name) {
           setAgents((prev) =>
             prev.map((a) =>
-              a.name === event.name ? { ...a, status: "running", progress: 50 } : a
+              a.name === event.name ? { ...a, status: "running", progress: 25 } : a
+            )
+          );
+          console.debug(`[SSE] Agent started: ${event.name}`);
+        }
+        break;
+
+      case "agent_update":
+        // Agent is processing - update progress
+        if (event.name) {
+          setAgents((prev) =>
+            prev.map((a) =>
+              a.name === event.name ? { ...a, status: "running", progress: 75 } : a
             )
           );
           
@@ -133,63 +145,51 @@ export function useResearch(): UseResearchReturn {
             if (data.final_report && typeof data.final_report === 'object') {
               const report = data.final_report as FinalReport;
               setReportTokens(JSON.stringify(report, null, 2));
-            }
-            
-            // If this is the formatter agent finishing, it has the full report
-            if (event.name === 'format_report' && data.final_report) {
-              const report = data.final_report as FinalReport;
               setFinalReport(report);
-              setReportTokens(JSON.stringify(report, null, 2));
             }
           }
         }
         break;
 
-      case "agent_start":
-        if (event.name) {
-          setAgents((prev) =>
-            prev.map((a) =>
-              a.name === event.name ? { ...a, status: "running", progress: 25 } : a
-            )
-          );
-        }
-        break;
-
       case "agent_complete":
       case "agent_done":
+        // Agent finished - mark as complete
         if (event.name) {
           setAgents((prev) =>
             prev.map((a) =>
               a.name === event.name ? { ...a, status: "complete", progress: 100 } : a
             )
           );
+          console.debug(`[SSE] Agent completed: ${event.name}`);
         }
         break;
 
       case "token":
-        // Append token to report
+        // Append token to report (for streaming text)
         if (event.text) {
           setReportTokens((prev) => prev + event.text);
         }
         break;
 
       case "research_complete":
-        // All agents done, mark any remaining as complete
+        // All agents done - mark any remaining as complete
         setAgents((prev) =>
           prev.map((a) =>
             a.status === "pending" ? { ...a, status: "complete", progress: 100 } : a
           )
         );
+        console.debug("[SSE] Research completed");
         break;
 
       case "error":
         if (event.message) {
           setError(event.message);
+          console.error(`[SSE] Stream error: ${event.message}`);
         }
         break;
 
       default:
-        console.log("Unknown event type:", event.type);
+        console.debug(`[SSE] Unknown event type: ${event.type}`);
     }
   }, []);
 
