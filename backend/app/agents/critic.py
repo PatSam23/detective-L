@@ -125,7 +125,6 @@ def critic_node(state: AgentState) -> dict:
         logger.error(f"Error in critic node: {str(e)}", exc_info=True)
         raise
 
-
 def route_after_critic(state: AgentState) -> str:
     """
     Conditional edge routing after critic.
