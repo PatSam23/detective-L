@@ -79,13 +79,53 @@
   - `frontend/.env.local.example`: Environment template showing API_URL configuration
 
 ## Bugs / Needs Attention
-- ✅ FIXED: Type mismatch between backend FinalReport model and frontend expectations
+### ✅ FIXED (Session 1)
+- Type mismatch between backend FinalReport model and frontend expectations
   - Backend was generating: `executive_summary`, `sections` (dict array)
   - Frontend expected: `summary`, `key_findings` (string array), `analysis`
   - Updated FinalReport Pydantic model to match frontend types
   - Updated formatter prompt and output generation
   - Fixed fallback report structure
   - Added claims to final report output
+
+### ✅ FIXED (Session 2 - Bug Solving Sprint)
+- **Frontend Type & Display Mismatch (Bug Fix 1-2)**
+  - `frontend/types/index.ts`: Updated FinalReport interface with correct backend schema
+    - Changed: `summary` → `executive_summary`, `key_findings[]` → `sections[]`, removed `analysis` and `claims`
+  - `frontend/components/ReportDisplay.tsx`: Updated JSX to use correct field names
+    - Replaced `parsedReport.summary` with `parsedReport.executive_summary`
+    - Replaced key_findings list with sections map rendering `section.title` and `section.content`
+    - Removed Analysis section (doesn't exist in backend)
+    - Removed Claims section (doesn't exist in backend)
+
+- **Agent Status Visibility After Research (Bug Fix 3)**
+  - `frontend/app/page.tsx`: Changed AgentStatus condition from `{isLoading && (...)}` to `{(isLoading || reportTokens) && (...)}`
+  - Now agent status panel stays visible after research completes, showing all agents as complete
+
+- **SSE Headers Missing (Bug Fix 4)**
+  - `backend/main.py`: Added required SSE headers to StreamingResponse in `/research/stream` endpoint
+    - Headers: `Cache-Control: no-cache`, `Connection: keep-alive`, `X-Accel-Buffering: no`
+    - Prevents buffering issues and ensures proper SSE streaming behavior
+
+- **Import Error in verify.py (Bug Fix 5)**
+  - `backend/verify.py`: Fixed import statement
+    - Changed `stream_research` to `astream_research` to match actual function in graph.py
+
+- **Revision Loop Clarity (Bug Fix 6)**
+  - `backend/app/agents/critic.py`: Updated comment for max 2 revisions
+    - Changed comment from "Can only revise up to 2 times" to "Max 2 revisions: only revise if needed AND revision_count < 2"
+    - Code already had correct `< 2` condition
+
+- **Request Cancellation Missing (Bug Fix 7)**
+  - `frontend/hooks/useResearch.ts`: Added AbortController to manage fetch lifecycle
+    - Added `abortControllerRef` to track active requests
+    - Cancel previous requests in `reset()` and at start of `run()`
+    - Added AbortError handling in catch block to prevent error display for cancelled requests
+    - Users can now interrupt research by submitting new query without error messages
+
+- **Unused Event Handler (Bug Fix 8)**
+  - `frontend/hooks/useResearch.ts`: Removed unused `case "agent_done":` from handleStreamEvent
+    - Backend never sends agent_done; `agent_complete` handles all completion events
 
 ## What is Next
 - **Week 4 Polish (Final Week):** Docker Compose setup for one-command deployment, LangSmith integration for observability/evaluation, final comprehensive README with architecture diagrams

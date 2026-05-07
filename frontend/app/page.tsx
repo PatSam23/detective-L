@@ -58,7 +58,7 @@ export default function Home() {
             </section>
 
             {/* Agent Status */}
-            {isLoading && (
+            {(isLoading || reportTokens) && (
               <section className="p-6 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
                 <AgentStatus agents={agents} />
               </section>
