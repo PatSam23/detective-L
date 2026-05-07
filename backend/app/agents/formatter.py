@@ -49,10 +49,12 @@ formatter_prompt = ChatPromptTemplate.from_messages([
 
 1. Take the draft report text
 2. Extract a clear, concise TITLE (max 80 chars)
-3. Write a SUMMARY (2-3 sentences)
-4. Extract 3-5 KEY_FINDINGS as a list
-5. Write a detailed ANALYSIS (1-2 paragraphs)
-6. Format as JSON with "title", "summary", "key_findings" (array), and "analysis" fields"""),
+3. Write an EXECUTIVE_SUMMARY (2-3 sentences)
+4. Break the report into 3-4 SECTIONS, each with:
+   - A section title (e.g., "Key Findings", "Implications", "Challenges")
+   - Detailed content for that section
+5. Format as JSON with "title", "executive_summary", and "sections" fields.
+   - sections should be an array of objects: [{"title": "...", "content": "..."}, ...]"""),
     ("human", "{report}")
 ])
 
@@ -94,15 +96,13 @@ def formatter_node(state: AgentState) -> dict:
     try:
         result = formatter_chain.invoke({"report": state["draft_report"]})
         
-        # Build final report dict
+        # Build final report dict with new schema
         final_report = {
             "title": result.get("title", "Research Report"),
-            "summary": result.get("summary", ""),
-            "key_findings": result.get("key_findings", []),
-            "analysis": result.get("analysis", ""),
+            "executive_summary": result.get("executive_summary", ""),
+            "sections": result.get("sections", []),
             "confidence_score": confidence_score,
             "sources": sources,
-            "claims": state.get("fact_check_results", []),
             "revision_count": revision_count,
         }
         
@@ -119,16 +119,23 @@ def formatter_node(state: AgentState) -> dict:
         logger.error(f"Error formatting report: {str(e)}", exc_info=True)
         logger.info("Using fallback report structure")
         
-        # Fallback to simple structure
-        key_findings = [s.strip() for s in state["draft_report"].split(".")[:5] if s.strip()]
+        # Fallback to simple structure with new schema
+        sections = [
+            {
+                "title": "Overview",
+                "content": state["draft_report"][:300]
+            },
+            {
+                "title": "Key Points",
+                "content": state["draft_report"][300:600] if len(state["draft_report"]) > 300 else ""
+            }
+        ]
         final_report = {
             "title": state["query"][:80],
-            "summary": state["draft_report"][:200],
-            "key_findings": key_findings,
-            "analysis": state["draft_report"],
+            "executive_summary": state["draft_report"][:200],
+            "sections": sections,
             "confidence_score": confidence_score,
             "sources": sources,
-            "claims": state.get("fact_check_results", []),
             "revision_count": revision_count,
         }
         
