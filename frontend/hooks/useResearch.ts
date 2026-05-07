@@ -67,13 +67,14 @@ export function useResearch(): UseResearchReturn {
       abortControllerRef.current.abort();
     }
     
-    // Create new controller for this request
-    abortControllerRef.current = new AbortController();
-    console.log("New AbortController created");
-    
+    // Reset state first
     reset();
     setIsLoading(true);
     setError(null);
+    
+    // Create new controller AFTER reset (so it doesn't get aborted)
+    abortControllerRef.current = new AbortController();
+    console.log("New AbortController created");
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";

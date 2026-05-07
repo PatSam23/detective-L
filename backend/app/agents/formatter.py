@@ -53,9 +53,12 @@ formatter_prompt = ChatPromptTemplate.from_messages([
 4. Break the report into 3-4 SECTIONS, each with:
    - A section title (e.g., "Key Findings", "Implications", "Challenges")
    - Detailed content for that section
-5. Format as JSON with "title", "executive_summary", and "sections" fields.
-   - sections should be an array of objects: [{"title": "...", "content": "..."}, ...]"""),
-    ("human", "{report}")
+
+Return JSON with these fields:
+- title: string
+- executive_summary: string
+- sections: array of {{title: string, content: string}}"""),
+    ("human", "Format this report:\n\n{report}")
 ])
 
 formatter_parser = JsonOutputParser(pydantic_object=FinalReport)
