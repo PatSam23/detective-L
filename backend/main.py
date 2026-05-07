@@ -69,20 +69,36 @@ async def run_research_sync(request: ResearchRequest):
 async def stream_research_events(request: ResearchRequest):
     """
     Execute research pipeline and stream SSE events for each agent's progress.
+    Sends agent_start, agent_update, and agent_complete events for proper frontend tracking.
     """
     logger.info(f"Received streaming research request: {request.query}")
     
     async def generate_events():
         try:
+            agent_started = set()  # Track which agents have sent start event
+            
             async for event in astream_research(request.query):
-                # Format as SSE
+                # Process each node in the event
                 for node_name, state_update in event.items():
-                    # Filter out large/non-serializable data from state_update
+                    # Send agent_start event on first appearance
+                    if node_name not in agent_started:
+                        agent_started.add(node_name)
+                        start_payload = {
+                            "type": "agent_start",
+                            "name": node_name,
+                        }
+                        yield f"data: {json.dumps(start_payload)}\n\n"
+                        logger.debug(f"Sent agent_start for {node_name}")
+                    
+                    # Filter out large/non-serializable data to reduce payload size
                     filtered_update = {}
                     for key, value in state_update.items():
-                        # Skip large lists like research_findings to avoid payload bloat
-                        if key in ["research_findings", "draft_report"] and isinstance(value, (list, str)):
-                            filtered_update[key] = f"<{key}>{len(value)} items" if isinstance(value, list) else f"<{key}>{len(value)} chars"
+                        # Skip large lists/strings to minimize payload
+                        if key in ["research_findings", "draft_report"]:
+                            if isinstance(value, list):
+                                filtered_update[key] = f"<{len(value)} items>"
+                            elif isinstance(value, str):
+                                filtered_update[key] = f"<{len(value)} chars>"
                         else:
                             try:
                                 json.dumps(value)  # Test serializability
@@ -90,18 +106,36 @@ async def stream_research_events(request: ResearchRequest):
                             except (TypeError, ValueError):
                                 filtered_update[key] = str(value)
                     
-                    payload = {
+                    # Send agent_update with filtered data
+                    update_payload = {
                         "type": "agent_update",
                         "name": node_name,
                         "data": filtered_update
                     }
-                    yield f"data: {json.dumps(payload)}\n\n"
+                    yield f"data: {json.dumps(update_payload)}\n\n"
+                    
+                    # Send agent_complete after processing
+                    # (in LangGraph streaming, each event means the node has completed)
+                    complete_payload = {
+                        "type": "agent_complete",
+                        "name": node_name,
+                    }
+                    yield f"data: {json.dumps(complete_payload)}\n\n"
+                    logger.debug(f"Sent agent_complete for {node_name}")
                     
             # Send final explicit completion event
-            yield f"data: {json.dumps({'type': 'research_complete'})}\n\n"
+            research_complete_payload = {
+                "type": "research_complete"
+            }
+            yield f"data: {json.dumps(research_complete_payload)}\n\n"
+            logger.info("Research stream completed successfully")
             
         except Exception as e:
             logger.error(f"Streaming error: {e}", exc_info=True)
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            error_payload = {
+                "type": "error",
+                "message": str(e)
+            }
+            yield f"data: {json.dumps(error_payload)}\n\n"
 
     return StreamingResponse(generate_events(), media_type="text/event-stream")
