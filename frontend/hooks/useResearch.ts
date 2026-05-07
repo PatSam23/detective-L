@@ -39,8 +39,12 @@ export function useResearch(): UseResearchReturn {
   const [error, setError] = useState<string | null>(null);
   const [finalReport, setFinalReport] = useState<FinalReport | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const reset = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     setAgents(
       AGENT_NAMES.map((name) => ({
         name,
@@ -55,6 +59,14 @@ export function useResearch(): UseResearchReturn {
   }, []);
 
   const run = useCallback(async (query: string) => {
+    // Cancel any existing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create new controller for this request
+    abortControllerRef.current = new AbortController();
+    
     reset();
     setIsLoading(true);
     setError(null);
@@ -69,6 +81,7 @@ export function useResearch(): UseResearchReturn {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ query }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
@@ -107,6 +120,11 @@ export function useResearch(): UseResearchReturn {
 
       setIsLoading(false);
     } catch (err) {
+      // Don't show error for aborted requests
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
+      
       const errorMsg = err instanceof Error ? err.message : "Unknown error occurred";
       setError(errorMsg);
       setIsLoading(false);
@@ -152,7 +170,6 @@ export function useResearch(): UseResearchReturn {
         break;
 
       case "agent_complete":
-      case "agent_done":
         // Agent finished - mark as complete
         if (event.name) {
           setAgents((prev) =>

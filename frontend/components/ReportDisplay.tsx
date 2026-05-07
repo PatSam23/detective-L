@@ -42,77 +42,25 @@ export function ReportDisplay({ reportContent, isGenerating }: ReportDisplayProp
           </div>
         )}
 
-        {/* Summary */}
-        {parsedReport.summary && (
+        {/* Executive Summary */}
+        {parsedReport.executive_summary && (
           <div>
-            <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">Summary</h3>
+            <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">Executive Summary</h3>
             <p className="text-slate-700 dark:text-gray-300 leading-relaxed">
-              {parsedReport.summary}
+              {parsedReport.executive_summary}
             </p>
           </div>
         )}
 
-        {/* Key Findings */}
-        {parsedReport.key_findings && parsedReport.key_findings.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">Key Findings</h3>
-            <ul className="space-y-2">
-              {parsedReport.key_findings.map((finding, idx) => (
-                <li key={idx} className="flex gap-3">
-                  <span className="text-green-600 dark:text-green-400 font-bold">✓</span>
-                  <span className="text-slate-700 dark:text-gray-300">{finding}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Analysis */}
-        {parsedReport.analysis && (
-          <div>
-            <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">Analysis</h3>
-            <p className="text-slate-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
-              {parsedReport.analysis}
-            </p>
-          </div>
-        )}
-
-        {/* Claims with Confidence */}
-        {parsedReport.claims && parsedReport.claims.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">Verified Claims</h3>
-            <div className="space-y-2">
-              {parsedReport.claims.map((claim, idx) => (
-                <div
-                  key={idx}
-                  className={`p-3 rounded-lg border ${
-                    claim.flagged
-                      ? "bg-red-100 dark:bg-red-900/20 border-red-300 dark:border-red-600"
-                      : "bg-green-100 dark:bg-green-900/20 border-green-300 dark:border-green-600"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-slate-700 dark:text-gray-300 flex-1">{claim.text}</p>
-                    <div className="ml-4 text-right">
-                      <span
-                        className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                          claim.confidence > 0.8
-                            ? "bg-green-500 dark:bg-green-600 text-white"
-                            : claim.confidence > 0.6
-                            ? "bg-yellow-500 dark:bg-yellow-600 text-white"
-                            : "bg-red-500 dark:bg-red-600 text-white"
-                        }`}
-                      >
-                        {(claim.confidence * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                  </div>
-                  {claim.flagged && (
-                    <p className="text-xs text-red-600 dark:text-red-300 mt-1">⚠️ Requires further verification</p>
-                  )}
-                </div>
-              ))}
-            </div>
+        {/* Sections */}
+        {parsedReport.sections && parsedReport.sections.length > 0 && (
+          <div className="space-y-4">
+            {parsedReport.sections.map((section, idx) => (
+              <div key={idx}>
+                <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">{section.title}</h3>
+                <p className="text-slate-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{section.content}</p>
+              </div>
+            ))}
           </div>
         )}
 

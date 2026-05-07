@@ -136,6 +136,12 @@ async def stream_research_events(request: ResearchRequest):
                 "type": "error",
                 "message": str(e)
             }
-            yield f"data: {json.dumps(error_payload)}\n\n"
-
-    return StreamingResponse(generate_events(), media_type="text/event-stream")
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )

@@ -112,7 +112,7 @@ def critic_node(state: AgentState) -> dict:
         claims_summary = [f"{c.get('text', '')[:50]}... ({c.get('confidence', 1):.2f})" for c in claims]
         logger.debug(f"Individual claims: {claims_summary}") 
         
-        # Can only revise up to 2 times (max revision_count is 2)
+        # Max 2 revisions: only revise if needed AND revision_count < 2
         needs_revision = result.get('needs_revision', False) and state["revision_count"] < 2
         logger.info(f"Needs revision: {needs_revision} (result.needs_revision={result.get('needs_revision', False)}), revision_count={state['revision_count']}")
         

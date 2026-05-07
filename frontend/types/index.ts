@@ -14,12 +14,11 @@ export interface Claim {
 
 export interface FinalReport {
   title: string;
-  summary: string;
-  key_findings: string[];
-  analysis: string;
-  sources: string[];
+  executive_summary: string;
+  sections: { title: string; content: string }[];
   confidence_score: number;
-  claims: Claim[];
+  sources: string[];
+  revision_count: number;
 }
 
 export interface ResearchResponse {
