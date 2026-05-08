@@ -79,7 +79,8 @@
   - `frontend/.env.local.example`: Environment template showing API_URL configuration
 
 ## Bugs / Needs Attention
-- ✅ FIXED: Type mismatch between backend FinalReport model and frontend expectations
+### ✅ FIXED (Session 1)
+- Type mismatch between backend FinalReport model and frontend expectations
   - Backend was generating: `executive_summary`, `sections` (dict array)
   - Frontend expected: `summary`, `key_findings` (string array), `analysis`
   - Updated FinalReport Pydantic model to match frontend types
@@ -87,26 +88,91 @@
   - Fixed fallback report structure
   - Added claims to final report output
 
+### ✅ FIXED (Session 2 - Bug Solving Sprint)
+- **Frontend Type & Display Mismatch (Bug Fix 1-2)**
+  - `frontend/types/index.ts`: Updated FinalReport interface with correct backend schema
+    - Changed: `summary` → `executive_summary`, `key_findings[]` → `sections[]`, removed `analysis` and `claims`
+  - `frontend/components/ReportDisplay.tsx`: Updated JSX to use correct field names
+    - Replaced `parsedReport.summary` with `parsedReport.executive_summary`
+    - Replaced key_findings list with sections map rendering `section.title` and `section.content`
+    - Removed Analysis section (doesn't exist in backend)
+    - Removed Claims section (doesn't exist in backend)
+
+- **Agent Status Visibility After Research (Bug Fix 3)**
+  - `frontend/app/page.tsx`: Changed AgentStatus condition from `{isLoading && (...)}` to `{(isLoading || reportTokens) && (...)}`
+  - Now agent status panel stays visible after research completes, showing all agents as complete
+
+- **SSE Headers Missing (Bug Fix 4)**
+  - `backend/main.py`: Added required SSE headers to StreamingResponse in `/research/stream` endpoint
+    - Headers: `Cache-Control: no-cache`, `Connection: keep-alive`, `X-Accel-Buffering: no`
+    - Prevents buffering issues and ensures proper SSE streaming behavior
+
+- **Import Error in verify.py (Bug Fix 5)**
+  - `backend/verify.py`: Fixed import statement
+    - Changed `stream_research` to `astream_research` to match actual function in graph.py
+
+- **Revision Loop Clarity (Bug Fix 6)**
+  - `backend/app/agents/critic.py`: Updated comment for max 2 revisions
+    - Changed comment from "Can only revise up to 2 times" to "Max 2 revisions: only revise if needed AND revision_count < 2"
+    - Code already had correct `< 2` condition
+
+- **Request Cancellation Missing (Bug Fix 7)**
+  - `frontend/hooks/useResearch.ts`: Added AbortController to manage fetch lifecycle
+    - Added `abortControllerRef` to track active requests
+    - Cancel previous requests in `reset()` and at start of `run()`
+    - Added AbortError handling in catch block to prevent error display for cancelled requests
+    - Users can now interrupt research by submitting new query without error messages
+
+- **Unused Event Handler (Bug Fix 8)**
+  - `frontend/hooks/useResearch.ts`: Removed unused `case "agent_done":` from handleStreamEvent
+    - Backend never sends agent_done; `agent_complete` handles all completion events
+
+- **⭐ SSE Fetch Request Not Transmitting (Bug Fix 10) - CRITICAL**
+  - `frontend/hooks/useResearch.ts`: Fixed AbortController timing in useResearch hook
+    - **Root Cause:** AbortController was created BEFORE reset(), which immediately aborted the signal
+    - **Sequence Problem:** `abortControllerRef.current = new AbortController(); reset();` → reset() calls abort() on signal just created
+    - **Result:** Fetch request would fail with AbortError before transmission
+    - **Fix:** Moved AbortController creation to AFTER reset() call
+    - **Impact:** Frontend fetch now successfully reaches backend, SSE streaming works end-to-end
+    - Verified with 3 consecutive queries all streaming successfully
+
+- **Formatter LLM Prompt Template Error (Bug Fix 11)**
+  - `backend/app/agents/formatter.py`: Fixed LangChain template variable parsing issue
+    - **Root Cause:** LLM prompt instructions included JSON format specs with `{"title"`, causing LangChain to parse `{` as template variable marker
+    - **Error Message:** `'Input to ChatPromptTemplate is missing variables {'"title"'}. Expected: ["title", "report"]`
+    - **Fix:** Escaped braces in system message using double braces `{{` and `}}` to avoid template parsing
+    - Also improved human message clarity: `"{report}"` → `"Format this report:\n\n{report}"`
+    - **Impact:** Formatter now works without errors (fallback no longer needed), processes reports successfully
+
+
 ## What is Next
+- **PR Review:** Create PR from `feature/fix-sse-events` to `dev` branch with 12 commits (all 9 original bug fixes + AbortController timing + formatter template fixes)
 - **Week 4 Polish (Final Week):** Docker Compose setup for one-command deployment, LangSmith integration for observability/evaluation, final comprehensive README with architecture diagrams
 
 ## Test Results Summary
-All architecture components validated successfully through end-to-end integration testing:
+All architecture components validated successfully through **FULL END-TO-END INTEGRATION** testing:
 - **Backend API Status:** ✅ HEALTHY - `/health` endpoint returning `{"status":"healthy","service":"detective-l"}`
-- **Frontend Dashboard:** ✅ LOADED - Next.js dev server running on port 3000
-- **SSE Streaming:** ✅ WORKING - Real-time agent status updates flowing from backend to frontend
+- **Frontend Dashboard:** ✅ LOADED - Next.js dev server running on port 3000, responsive UI with theme toggle
+- **SSE Streaming:** ✅ **NOW FULLY WORKING** - Real-time agent status updates flowing from backend to frontend
+  - **Root Cause Fixed (Bug #10):** AbortController creation was happening BEFORE reset(), causing immediate abort
+  - **Solution:** Moved AbortController creation AFTER reset() to ensure signal is active during fetch
+  - **Formatter Fix (Bug #11):** Template variable parsing error in LLM prompt (expected "title" variable)
+  - **Solution:** Escaped braces in system message (`{{` `}}`) to avoid LangChain template parsing conflicts
 - **Agent Pipeline:** ✅ COMPLETE - All 7 agents executing in sequence (Planner → Web Researchers → Synthesis → Critic → Revisor → Formatter)
-- **Report Generation:** ✅ DISPLAYED - Final research reports rendering with title, sections, sources, and confidence scores
-- **End-to-End Flow:** ✅ VERIFIED
+- **Report Generation:** ✅ DISPLAYED - Final research reports rendering with title, executive_summary, sections, sources, and confidence scores
+- **Multi-Query Testing:** ✅ VERIFIED - Tested 3 consecutive queries (Healthcare, Renewable Energy, Quantum Computing) - all completed successfully
+- **End-to-End Flow:** ✅ FULLY VERIFIED
   1. User submits research query in Next.js frontend
-  2. SSE connection established to `/research/stream` endpoint
-  3. Backend agents execute in real-time
-  4. Frontend displays live agent progress (status icons update: ⭕ → 🔄 → ✅)
-  5. Final report extracted from state updates and displayed
-  6. 19-20 sources cited with confidence scores (67-84%)
-  7. "New Research" button resets for next query
+  2. Frontend fetch successfully reaches backend (OPTIONS preflight + POST request)
+  3. SSE connection established to `/research/stream` endpoint  
+  4. Backend agents execute in real-time with full 7-node pipeline
+  5. Frontend displays live agent progress (status icons update: ⭕ → ✅ with 100%)
+  6. Final report extracted from state updates and displayed
+  7. 19-22 sources cited with confidence scores (50-87%)
+  8. "New Research" button resets for next query
+  9. Subsequent queries work without errors or interference
 
-**Architecture Status:** ✅ READY FOR PRODUCTION
+**Architecture Status:** ✅ PRODUCTION-READY FOR PHASE 1
 
 # for my reference:
 Dependency	Purpose	In detective-L

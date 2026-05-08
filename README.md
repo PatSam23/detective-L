@@ -1,7 +1,7 @@
-﻿# detective-L: Multi-Agent Enterprise Research Intelligence Platform
+﻿# detective-L: Multi-Agent Enterprise Research Intelligence Platform 
 
 "An autonomous multi-agent system that researches any business topic by orchestrating specialized AI agents in parallel, synthesizes findings into structured intelligence reports, fact-checks its own output, and delivers everything through a real-time streaming dashboard — built on LangGraph, LangChain, and fully observable via LangSmith."
-
+ 
 ## The Architecture
 - **Planner Agent:** Breaks query into N subtopics and assigns agent types.
 - **Web Agents / RAG Agents:** Dynamically spawn to gather knowledge in parallel.
