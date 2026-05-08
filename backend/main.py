@@ -7,6 +7,7 @@ import logging
 import asyncio
 
 from app.core.graph import arun_research, astream_research, research_app
+from app.gateway.router import router as gateway_router
 
 # Setup minimal file logger specifically for API entry if needed
 logger = logging.getLogger("api")
@@ -16,6 +17,8 @@ app = FastAPI(
     description="Multi-agent parallel research intelligence system",
     version="1.0.0"
 )
+
+app.include_router(gateway_router)
 
 # Allow frontend requests
 app.add_middleware(
