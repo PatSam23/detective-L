@@ -32,7 +32,7 @@ def verify_imports():
         from app.agents.formatter import formatter_node
         
         print("  ✓ Importing graph...")
-        from app.core.graph import build_research_graph, run_research, arun_research, stream_research
+        from app.core.graph import build_research_graph, run_research, arun_research, astream_research
         
         print("\nAll imports successful!\n")
         return True
