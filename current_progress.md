@@ -1,8 +1,8 @@
 # Current Progress
 
 ## Overview
-**Current Phase:** Week 2 — LLM Gateway Layer (COMPLETE) ✅ → Moving to Week 3
-**Status:** Core Agent Pipeline Built + API Endpoints & Streaming Implemented + Frontend Dashboard Built + LLM Gateway Abstraction Layer ✅
+**Current Phase:** Week 2 — LLM Gateway Layer (COMPLETE) ✅ → Code Organization Refactoring
+**Status:** Core Agent Pipeline Built + API Endpoints & Streaming Implemented + Frontend Dashboard Built + LLM Gateway Abstraction Layer ✅ + API Schema Refactoring ✅
 
 ## Already Developed
 - *Workspace scaffolding:* Initialized `backend/` and `frontend/` folders based on Edith architectural review.
@@ -140,6 +140,18 @@
     - Message role detection with fallback logic
     - Content string normalization for non-string inputs
     - Async support for all gateway calls (ainvoke path for FastAPI context)
+  - **API Schema Refactoring (Week 2 Code Organization)** ✅ NEW
+    - `backend/app/schemas.py`: Centralized API contract models (NEW)
+      - `ResearchRequest`: request schema for research queries (min_length=5)
+      - `ResearchResponse`: response schema with status, final_report, sources, revision_count
+    - `backend/main.py`: Updated imports
+      - Removed local model definitions (BaseModel, Field imports)
+      - Now imports: `from app.schemas import ResearchRequest, ResearchResponse`
+    - **Benefits:**
+      - ✅ Clear separation: internal models (`app/core/models.py`) vs API contracts (`app/schemas.py`)
+      - ✅ Cleaner main.py focused on endpoints only
+      - ✅ Scalable for adding more endpoints/schemas
+      - ✅ Production-grade organization following FastAPI best practices
 
 ## Bugs / Needs Attention
 ### ✅ FIXED (Session 1)
@@ -168,14 +180,20 @@
 
 ### ✅ FIXED (Session 2 - Bug Solving Sprint)
 - **Frontend Type & Display Mismatch (Bug Fix 1-2)**
-  - `frontend/types/index.ts`: Updated FinalReport interface with correct backend schema
-    - Changed: `summary` → `executive_summary`, `key_findings[]` → `sections[]`, removed `analysis` and `claims`
-  - `frontend/components/ReportDisplay.tsx`: Updated JSX to use correct field names
-    - Replaced `parsedReport.summary` with `parsedReport.executive_summary`
-    - Replaced key_findings list with sections map rend
+  - `frontend/ts (feature/llm-gateway):**
+```
+1. 0d565f5 feat: implement LLM gateway layer for provider abstraction
+   - Created app/gateway module with request/response schemas
+   - Added provider implementations (OpenAI, Anthropic, Gemini)
+   - Implemented /gateway/chat endpoint for centralized LLM routing
+   - Updated llm_client to use gateway instead of direct Gemini client
+   - All agents now route through gateway for single point of control
 
-## Git Branches
-- `main`: Production-stable code (v1.0 release)
+2. [LATEST] refactor: move API schemas to separate module
+   - Created backend/app/schemas.py with ResearchRequest and ResearchResponse
+   - Updated backend/main.py to import from schemas module
+   - Removed redundant model definitions from main.py
+   - Improved code organization for scalability
 - `uat`: Staging/testing environment (v1.0+ testing)
 - `dev`: Active development (merged features)
 - `feature/llm-gateway`: Current feature branch (Week 2 LLM Gateway) ← **CURRENT**
