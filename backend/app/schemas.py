@@ -10,7 +10,7 @@ class ResearchRequest(BaseModel):
         min_length=5, 
         description="The research topic to investigate"
     )
-
+ 
 
 class ResearchResponse(BaseModel):
     """Schema for POST /research synchronous endpoint response."""
