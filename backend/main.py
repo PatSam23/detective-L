@@ -1,12 +1,13 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
 import json
 import logging
 import asyncio
 
 from app.core.graph import arun_research, astream_research, research_app
+from app.gateway.router import router as gateway_router
+from app.schemas import ResearchRequest, ResearchResponse
 
 # Setup minimal file logger specifically for API entry if needed
 logger = logging.getLogger("api")
@@ -17,6 +18,8 @@ app = FastAPI(
     version="1.0.0"
 )
 
+app.include_router(gateway_router)
+
 # Allow frontend requests
 app.add_middleware(
     CORSMiddleware,
@@ -25,17 +28,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-class ResearchRequest(BaseModel):
-    query: str = Field(..., min_length=5, description="The research topic to investigate")
-
-
-class ResearchResponse(BaseModel):
-    status: str
-    final_report: dict
-    sources: list[str]
-    revision_count: int
 
 
 @app.get("/health")

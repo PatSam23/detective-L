@@ -1,8 +1,8 @@
 # Current Progress
 
 ## Overview
-**Current Phase:** Week 3 — Next.js Frontend Dashboard
-**Status:** Core Agent Pipeline Built + API Endpoints & Streaming Implemented + Frontend Dashboard Built ✅
+**Current Phase:** Week 2 — LLM Gateway Layer (COMPLETE) ✅ → Code Organization Refactoring
+**Status:** Core Agent Pipeline Built + API Endpoints & Streaming Implemented + Frontend Dashboard Built + LLM Gateway Abstraction Layer ✅ + API Schema Refactoring ✅
 
 ## Already Developed
 - *Workspace scaffolding:* Initialized `backend/` and `frontend/` folders based on Edith architectural review.
@@ -77,24 +77,136 @@
   - `frontend/tailwind.config.js`: Tailwind CSS with custom color schemes
   - `frontend/postcss.config.js`: PostCSS configuration for Tailwind
   - `frontend/.env.local.example`: Environment template showing API_URL configuration
+- **LLM Gateway Layer (Week 2)** ✅ NEW
+  - `backend/app/gateway/` module created with 4 core files:
+    - `backend/app/gateway/schemas.py`: Pydantic models for gateway requests/responses
+      - `GatewayMessage`: role + content structure (system/user/assistant)
+      - `GatewayChatRequest`: provider, model, messages, temperature, max_tokens
+      - `GatewayChatResponse`: provider, model, content, usage tracking
+    - `backend/app/gateway/providers.py`: Multi-provider implementations
+      - `_call_openai()`: OpenAI API integration (gpt-4o-mini, gpt-4, etc.)
+      - `_call_anthropic()`: Anthropic Claude integration (claude-3-opus, claude-3-sonnet, etc.)
+      - `_call_gemini()`: Google Gemini integration (gemini-2.5-flash, gemini-2-pro)
+      - `call_provider()`: Router function selecting provider based on request
+      - Async and sync support for all providers
+    - `backend/app/gateway/router.py`: FastAPI endpoint
+      - `POST /gateway/chat`: Single unified endpoint for all LLM calls
+      - Error handling with 400 (ValueError) and 500 (provider failure) responses
+    - `backend/app/gateway/__init__.py`: Package initialization
+  - `backend/app/core/llm_client.py`: Refactored to use gateway
+    - **Before:** Direct ChatGoogleGenerativeAI client instances (llm, llm_creative, llm_strict)
+    - **After:** LangChain RunnableLambda wrapping HTTP calls to `/gateway/chat`
+    - Message normalization: converts BaseMessage types to gateway payload format
+    - Async support: both `invoke()` and `ainvoke()` methods backed by gateway
+    - Environment variables for configuration:
+      - `GATEWAY_BASE_URL`: Gateway endpoint (default: http://localhost:8000)
+      - `LLM_PROVIDER`: Default provider (default: gemini)
+      - `LLM_MODEL`: Default model (default: gemini-2.5-flash)
+      - `LLM_MAX_TOKENS`: Output token limit (default: 4096)
+  - `backend/main.py`: Updated to include gateway router
+    - `app.include_router(gateway_router)` registers `/gateway/chat` endpoint
+  - `backend/.env`: Added gateway configuration
+    - `LLM_PROVIDER=gemini`
+    - `LLM_MODEL=gemini-2.5-flash`
+  - **Key Benefits:**
+    - ✅ Single abstraction point for all LLM calls across all agents
+    - ✅ Provider swapping without touching agent code (OpenAI ↔ Anthropic ↔ Gemini)
+    - ✅ Centralized observability and policy enforcement
+    - ✅ Foundation for Week 3 (Redis caching), Week 4 (DB tracking), Week 5 (rate limiting/failover)
+    - ✅ All 6 agents now route through gateway:
+      - Planner: calls gateway for subtopic decomposition
+      - Web Researchers: independent agents (use Tavily, not LLM)
+      - Synthesis: calls gateway to merge findings
+      - Critic: calls gateway for fact-checking
+      - Revisor: calls gateway for report improvement
+      - Formatter: calls gateway for final report structuring
+  - **End-to-End Testing Verified:**
+    - ✅ Backend server running on port 8000
+    - ✅ Frontend running on port 3000
+    - ✅ `/gateway/chat` endpoint responding with 200 OK (tested with direct curl)
+    - ✅ Gemini provider integration working (received "Hello!" response)
+    - ✅ Full research pipeline executing through gateway:
+      - Planner: 100% (generated 5 subtopics)
+      - Web Research: 100% (5 parallel searches completed)
+      - Synthesis: 100% (draft report generated)
+      - Critic: 100% (fact-checking completed)
+      - Revisor: 100% (report refined)
+      - Formatter: 100% (final report structured)
+    - ✅ Final report displayed with title, sections, sources (19 sources cited)
+    - ✅ Gateway logging shows all calls: `HTTP Request: POST http://localhost:8000/gateway/chat "HTTP/1.1 200 OK"`
+  - **Code Quality:**
+    - Type hints throughout (Literal, Optional, List, Dict)
+    - Error handling with HTTPStatusError propagation
+    - Message role detection with fallback logic
+    - Content string normalization for non-string inputs
+    - Async support for all gateway calls (ainvoke path for FastAPI context)
+  - **API Schema Refactoring (Week 2 Code Organization)** ✅ NEW
+    - `backend/app/schemas.py`: Centralized API contract models (NEW)
+      - `ResearchRequest`: request schema for research queries (min_length=5)
+      - `ResearchResponse`: response schema with status, final_report, sources, revision_count
+    - `backend/main.py`: Updated imports
+      - Removed local model definitions (BaseModel, Field imports)
+      - Now imports: `from app.schemas import ResearchRequest, ResearchResponse`
+    - **Benefits:**
+      - ✅ Clear separation: internal models (`app/core/models.py`) vs API contracts (`app/schemas.py`)
+      - ✅ Cleaner main.py focused on endpoints only
+      - ✅ Scalable for adding more endpoints/schemas
+      - ✅ Production-grade organization following FastAPI best practices
 
 ## Bugs / Needs Attention
 ### ✅ FIXED (Session 1)
 - Type mismatch between backend FinalReport model and frontend expectations
   - Backend was generating: `executive_summary`, `sections` (dict array)
   - Frontend expected: `summary`, `key_findings` (string array), `analysis`
-  - Updated FinalReport Pydantic model to match frontend types
-  - Updated formatter prompt and output generation
+  - Week 3 — Redis Caching (Cost Optimization)** 
+  - Add Redis service for caching based on prompt hash
+  - Track cache_hit vs cache_miss metrics
+  - Avoid repeated LLM calls with TTL-based expiration
+- **Week 4 — PostgreSQL (Tracking & Analytics)**
+  - Create DB schema for requests, responses, usage tracking
+  - Log prompt, tokens, latency, model, timestamp
+  - Query: cost per day
+- **Week 5 — Reliability Layer**
+  - Rate limiting (token bucket algorithm)
+  - Failover between providers
+  - Circuit breaker pattern
+- **Week 6 — Observability + Deployment**
+  - Structured logging + metrics (latency, error rate, cache hit rate)
+  - Docker Compose setup for all services
+  - Multi-environment configs (.env.dev, .env.uat, .env.prod)
+  - Deployment flow: dev → uat → main with versioning
   - Fixed fallback report structure
   - Added claims to final report output
 
 ### ✅ FIXED (Session 2 - Bug Solving Sprint)
 - **Frontend Type & Display Mismatch (Bug Fix 1-2)**
-  - `frontend/types/index.ts`: Updated FinalReport interface with correct backend schema
-    - Changed: `summary` → `executive_summary`, `key_findings[]` → `sections[]`, removed `analysis` and `claims`
-  - `frontend/components/ReportDisplay.tsx`: Updated JSX to use correct field names
-    - Replaced `parsedReport.summary` with `parsedReport.executive_summary`
-    - Replaced key_findings list with sections map rendering `section.title` and `section.content`
+  - `frontend/ts (feature/llm-gateway):**
+```
+1. 0d565f5 feat: implement LLM gateway layer for provider abstraction
+   - Created app/gateway module with request/response schemas
+   - Added provider implementations (OpenAI, Anthropic, Gemini)
+   - Implemented /gateway/chat endpoint for centralized LLM routing
+   - Updated llm_client to use gateway instead of direct Gemini client
+   - All agents now route through gateway for single point of control
+
+2. [LATEST] refactor: move API schemas to separate module
+   - Created backend/app/schemas.py with ResearchRequest and ResearchResponse
+   - Updated backend/main.py to import from schemas module
+   - Removed redundant model definitions from main.py
+   - Improved code organization for scalability
+- `uat`: Staging/testing environment (v1.0+ testing)
+- `dev`: Active development (merged features)
+- `feature/llm-gateway`: Current feature branch (Week 2 LLM Gateway) ← **CURRENT**
+
+**Latest commit (feature/llm-gateway):**
+```
+0d565f5 feat: implement LLM gateway layer for provider abstraction
+- Created app/gateway module with request/response schemas
+- Added provider implementations (OpenAI, Anthropic, Gemini)
+- Implemented /gateway/chat endpoint for centralized LLM routing
+- Updated llm_client to use gateway instead of direct Gemini client
+- All agents now route through gateway for single point of control
+```ering `section.title` and `section.content`
     - Removed Analysis section (doesn't exist in backend)
     - Removed Claims section (doesn't exist in backend)
 
