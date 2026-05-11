@@ -143,10 +143,215 @@ git checkout uat
 git pull origin uat
 
 # 2. Merge dev into UAT
-git merge dev
+git merge origin/dev
 
 # 3. Push to remote
 git push origin uat
+```
+
+### UAT → Main (when ready for production):
+
+```bash
+# 1. Make sure main is up to date
+git checkout main
+git pull origin main
+
+# 2. Merge UAT into main
+git merge origin/uat
+
+# 3. Push to remote
+git push origin main
+```
+
+---
+
+## ⚠️ CRITICAL: Synchronization Protocol
+
+**The #1 cause of branch divergence:** Not pulling from remote before merging.
+
+### Before EVERY merge operation, follow this exact sequence:
+
+```bash
+# STEP 1: Always pull from remote first
+git fetch origin                    # Update remote tracking branches
+git checkout <target_branch>        # Switch to the branch you're merging INTO
+git pull origin <target_branch>     # Get latest commits from GitHub
+
+# STEP 2: Then do your merge
+git merge origin/<source_branch>    # Merge the source branch
+
+# STEP 3: Push immediately
+git push origin <target_branch>     # Send changes back to GitHub
+
+# STEP 4: Verify the merge succeeded
+git log --oneline -5                # Show recent commits
+```
+
+**Example - Merging dev into uat:**
+```bash
+git fetch origin                    # 1. Refresh
+git checkout uat                    # 2. Switch to uat
+git pull origin uat                 # 3. Get latest uat from GitHub
+git merge origin/dev                # 4. Merge dev
+git push origin uat                 # 5. Push result
+```
+
+---
+
+## 🔍 Your Ideal Workflow (Day-to-Day)
+
+### When starting work on a new feature:
+
+```bash
+# 1. Ensure you're on dev and it's up to date
+git checkout dev
+git fetch origin
+git pull origin dev
+
+# 2. Create feature branch (ALWAYS from dev, NEVER from main)
+git checkout -b feature/llm-caching
+
+# 3. Work on the feature
+# ... edit files, test, commit ...
+git add .
+git commit -m "feat: implement Redis caching layer"
+
+# 4. Keep feature branch synced with dev while working
+#    (Do this every day or before final push)
+git fetch origin
+git merge origin/dev  # Bring in any new changes from dev
+
+# 5. When feature is DONE, push to GitHub
+git push origin feature/llm-caching
+```
+
+### When submitting a feature (GitHub Pull Request):
+
+```bash
+# Go to GitHub → Compare & Pull Request
+# Ensure:
+# - Base branch = dev (NOT main)
+# - Head branch = feature/your-feature-name
+# - Add description of what you built
+# - Request code review
+# - Wait for approval, then merge on GitHub
+# - GitHub will offer to delete the branch → click it
+```
+
+### When promoting dev → uat:
+
+```bash
+# Only do this when dev is tested and ready
+git fetch origin                  # Get latest remote info
+git checkout uat                  # Switch to uat
+git pull origin uat               # Ensure uat is current
+git merge origin/dev              # Bring dev changes into uat
+git push origin uat               # Push to GitHub
+```
+
+### When promoting uat → main (for production release):
+
+```bash
+# Only do this after uat has been tested thoroughly
+git fetch origin                  # Get latest remote info
+git checkout main                 # Switch to main
+git pull origin main              # Ensure main is current
+git merge origin/uat              # Bring uat changes into main
+git push origin main              # Push to GitHub (NOW LIVE)
+```
+
+---
+
+## ✅ Prevention Checklist (Avoid Divergence)
+
+Before every merge, verify these 4 things:
+
+**1. Remote is up to date:**
+```bash
+git fetch origin
+```
+
+**2. You're on the correct target branch:**
+```bash
+git branch  # Shows current branch (*)
+```
+
+**3. Your branch is synced with remote:**
+```bash
+git status
+# Should say: "Your branch is up to date with 'origin/branchname'"
+# Should NOT say: "Your branch is behind..."
+```
+
+**4. You're merging from the right source:**
+```bash
+git log --oneline -3 origin/<source_branch>  # Verify commits exist
+```
+
+If anything fails these checks, STOP and fix it first.
+
+---
+
+## 🚨 Fixing Branch Divergence (If It Happens Again)
+
+**If you see: "X commits ahead, Y commits behind"**
+
+This means the branches have diverged. Fix it immediately:
+
+```bash
+# 1. Fetch latest from GitHub
+git fetch origin
+
+# 2. Check what's different
+git log --oneline origin/main..origin/dev        # What's in dev NOT in main
+git log --oneline origin/dev..origin/main        # What's in main NOT in dev
+
+# 3. Align them (merge the branch with MORE commits into the one with FEWER)
+# Usually: merge main into dev (or uat)
+git checkout dev
+git pull origin dev
+git merge origin/main  # Brings main's commits into dev
+git push origin dev
+
+# 4. Verify they're aligned
+git log --oneline origin/main..origin/dev  # Should be 0
+git log --oneline origin/dev..origin/main  # Should be 0
+```
+
+---
+
+## 🔐 Why This Prevents Problems
+
+| Issue | Prevention |
+|-------|-----------|
+| Feature branch with old code | ALWAYS create feature from fresh dev (`git pull`) |
+| Lost commits | ALWAYS merge `origin/` branches, not local ones |
+| Diverged history | ALWAYS `git fetch` + `git pull` before merging |
+| Accidental main changes | Feature → dev ONLY (not main), dev → uat, uat → main |
+| Merge conflicts | Pull frequently, small commits, early merges |
+| Remote not synced | Always push immediately after merge |
+
+---
+
+## 📊 Visual: Safe Merge Operation
+
+```
+START HERE
+    ↓
+git fetch origin        ← Get latest from GitHub
+    ↓
+git checkout <target>   ← Switch to where you're merging INTO
+    ↓
+git pull origin <target> ← Ensure you have latest code
+    ↓
+git merge origin/<source> ← Merge the source code
+    ↓
+git push origin <target> ← Send back to GitHub
+    ↓
+DONE ✅
+```
+
+**Follow this EVERY time. No exceptions.**
 
 # 4. Test in UAT environment
 # Run tests, QA review, etc.
