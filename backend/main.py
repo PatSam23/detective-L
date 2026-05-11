@@ -1,12 +1,15 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
 import json
 import logging
 import asyncio
+import os
 
 from app.core.graph import arun_research, astream_research, research_app
+from app.gateway.router import router as gateway_router
+from app.gateway.cache import get_cache_manager
+from app.schemas import ResearchRequest, ResearchResponse
 
 # Setup minimal file logger specifically for API entry if needed
 logger = logging.getLogger("api")
@@ -16,6 +19,8 @@ app = FastAPI(
     description="Multi-agent parallel research intelligence system",
     version="1.0.0"
 )
+
+app.include_router(gateway_router)
 
 # Allow frontend requests
 app.add_middleware(
@@ -27,20 +32,49 @@ app.add_middleware(
 )
 
 
-class ResearchRequest(BaseModel):
-    query: str = Field(..., min_length=5, description="The research topic to investigate")
+@app.on_event("startup")
+async def startup_event():
+    """Initialize Redis cache on app startup."""
+    cache_enabled = os.getenv("CACHE_ENABLED", "true").lower() == "true"
+    redis_host = os.getenv("REDIS_HOST", "localhost")
+    redis_port = int(os.getenv("REDIS_PORT", 6379))
+    cache_ttl = int(os.getenv("CACHE_TTL", 86400))
+    
+    cache = get_cache_manager(
+        enabled=cache_enabled,
+        redis_host=redis_host,
+        redis_port=redis_port,
+        default_ttl=cache_ttl
+    )
+    
+    if cache_enabled:
+        logger.info(f"🚀 Redis Cache initialized (enabled={cache_enabled}, TTL={cache_ttl}s)")
+    else:
+        logger.info("⚠ Redis Cache disabled")
 
 
-class ResearchResponse(BaseModel):
-    status: str
-    final_report: dict
-    sources: list[str]
-    revision_count: int
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Close Redis cache connection on app shutdown."""
+    cache = get_cache_manager(enabled=False)
+    cache.close()
+    logger.info("🔌 Redis cache connection closed")
 
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "detective-l"}
+
+
+@app.get("/cache/stats")
+async def cache_stats():
+    """Get cache statistics (hits, misses, hit rate)."""
+    cache = get_cache_manager(enabled=False)  # Don't create new instance
+    stats = cache.get_stats()
+    return {
+        "cache": stats,
+        "message": "Cache statistics (track LLM call reduction)"
+    }
 
 
 @app.post("/research", response_model=ResearchResponse)
