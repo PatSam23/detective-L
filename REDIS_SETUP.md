@@ -1,5 +1,5 @@
 # Week 3: Redis Caching Setup Guide
-
+ 
 ## Architecture
 
 ```
