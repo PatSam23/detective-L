@@ -8,7 +8,7 @@ Transform Detective-L into a **production-grade AI system** by combining:
 2. LLM Gateway (NEW — core learning)
 3. Production infrastructure (Redis, DB, deployment)
 
----
+--- 
 
 # 🧠 System Architecture
 
