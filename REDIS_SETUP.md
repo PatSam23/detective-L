@@ -1,6 +1,6 @@
 # Week 3: Redis Caching Setup Guide
  
-## Architecture
+## Architecture 
 
 ```
 Request → Check Redis Cache (SHA256 hash of provider+model+messages)
