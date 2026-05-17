@@ -23,4 +23,4 @@ class LLMUsageLog(Base):
     latency_ms = Column(Float, nullable=False)
     cache_hit = Column(Boolean, default=False)
     
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
