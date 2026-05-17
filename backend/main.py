@@ -51,13 +51,13 @@ async def startup_event():
     )
     
     if cache_enabled:
-        logger.info(f"🚀 Redis Cache initialized (enabled={cache_enabled}, TTL={cache_ttl}s)")
+        logger.info(f"Redis Cache initialized (enabled={cache_enabled}, TTL={cache_ttl}s)")
     else:
-        logger.info("⚠ Redis Cache disabled")
+        logger.info("Redis Cache disabled")
     
     # Initialize Database
     await init_db()
-    logger.info("🚀 PostgreSQL Analytics initialized")
+    logger.info("PostgreSQL Analytics initialized")
 
 
 @app.on_event("shutdown")
