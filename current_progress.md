@@ -1,8 +1,8 @@
 # Current Progress
 
 ## Overview
-**Current Phase:** Week 3 — Redis Caching (COMPLETE) ✅ | Ready for Week 4 — PostgreSQL Analytics 🚀
-**Status:** Core Agent Pipeline ✅ + LLM Gateway Layer ✅ + Frontend Dashboard ✅ + Redis Cache Layer ✅
+**Current Phase:** Week 4 — PostgreSQL Analytics (COMPLETE) ✅ | Ready for Week 5 — Reliability Layer 🚀
+**Status:** Core Agent Pipeline ✅ + LLM Gateway Layer ✅ + Frontend Dashboard ✅ + Redis Cache Layer ✅ + PostgreSQL Analytics ✅ + Dev Workflow Tools ✅
 
 ## Already Developed
 - *Workspace scaffolding:* Initialized `backend/` and `frontend/` folders based on Edith architectural review.
@@ -246,6 +246,32 @@
       - 📊 Real-time cache statistics available via `/cache/stats`
       - 🔍 Detailed logging integration with cache hit/miss tracking
 
+- **PostgreSQL Analytics Layer (Week 4)** ✅ NEW
+  - `backend/requirements.txt`: Added `sqlalchemy` and `asyncpg` dependencies
+  - `backend/app/db/`: New database module
+    - `models.py`: `LLMUsageLog` model tracking provider, model, tokens, latency, cache_hit
+    - `database.py`: Async engine, session factory, and `init_db()` logic
+  - `backend/app/gateway/router.py`: Integrated DB logging via `BackgroundTasks`
+    - Logs every LLM call (hits and misses) for full visibility
+    - Captures precise latency and token usage
+  - `backend/main.py`: 
+    - Database initialization on startup
+    - New `/analytics/usage` endpoint for aggregate statistics
+    - **Load Dotenv Fix:** Added `load_dotenv()` to ensure `.env` variables are correctly picked up.
+  - `docker-compose.yml`: Added `postgres:15-alpine` service with persistence
+  - `backend/.env`: Configured `DATABASE_URL` and PostgreSQL credentials
+  - **Analytics Capabilities:**
+    - Total request count and cache hit rate
+    - Total token consumption tracking
+    - Average latency monitoring
+    - Recent activity feed (last 10 calls)
+  - **Connection Stability:** Fixed password authentication mismatch and verified local DB setup.
+
+- **Developer Workflow (VS Code Integration)** ✅ NEW
+  - `.vscode/tasks.json`: Automated backend (`uvicorn`) and frontend (`next dev`) tasks.
+  - Configured backend task to use root `.venv` interpreter for consistency.
+  - Added "Run All" compound task for one-click environment startup.
+
 ## Bugs / Needs Attention
 ### ✅ FIXED (Session 1)
 - Type mismatch between backend FinalReport model and frontend expectations
@@ -355,12 +381,12 @@
 
 
 ## What is Next
-- **Week 3 Completion:** Merge `feature/week3-redis-caching` → `uat` branch with full test verification ✅
-- **Week 4 — PostgreSQL (Tracking & Analytics):**
-  - Create DB schema for requests, responses, usage tracking
-  - Log prompt, tokens, latency, model, timestamp
-  - Query: cost per day, request frequency, popular topics
-  - Build analytics dashboard endpoint
+- **Week 4 Completion:** Final integration testing of PostgreSQL analytics with real traffic ✅
+- **Week 5 — Reliability Layer:**
+  - Rate limiting (token bucket algorithm)
+  - Failover between providers (e.g., Gemini → OpenAI)
+  - Circuit breaker pattern to protect system from failing providers
+  - Retry logic with exponential backoff
 
 ## Test Results Summary
 All architecture components validated successfully through **FULL END-TO-END INTEGRATION** testing:
