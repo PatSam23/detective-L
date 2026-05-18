@@ -25,7 +25,7 @@
 - **SSE / WebSockets** — real-time streaming from FastAPI to UI
 
 ## Installation
-
+ 
 \\\ash
 git clone https://github.com/PatSam23/detective-L.git
 cd detective-L
