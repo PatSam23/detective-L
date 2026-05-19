@@ -23,7 +23,7 @@ const NODE_COLORS = {
 
 export function AgentStatus({ agents }: AgentPipelineProps) {
   // Map agent name → status
-  const statusMap = Object.fromEntries(agents.map(a => [a.key ?? a.name, a.status ?? 'pending']));
+  const statusMap = Object.fromEntries(agents.map(a => [a.name, a.status ?? 'pending']));
 
   const NODE_R = 26;
   const ICON_SIZE = 14;
