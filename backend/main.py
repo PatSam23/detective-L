@@ -9,6 +9,7 @@ import os
 from app.core.graph import arun_research, astream_research, research_app
 from app.gateway.router import router as gateway_router
 from app.gateway.cache import get_cache_manager
+from app.core.llm_client import GatewayConfig
 from app.schemas import ResearchRequest, ResearchResponse
 from app.db.database import init_db, close_db, AsyncSessionLocal
 from app.db.models import LLMUsageLog
@@ -85,6 +86,56 @@ async def cache_stats():
     return {
         "cache": stats,
         "message": "Cache statistics (track LLM call reduction)"
+    }
+
+
+@app.post("/cache/clear")
+async def clear_cache():
+    """Clear all Redis cache entries and statistics."""
+    cache = get_cache_manager(enabled=False)
+    success = cache.clear()
+    cache.reset_stats()
+    return {
+        "success": success,
+        "message": "Cache cleared successfully" if success else "Cache clearing failed"
+    }
+
+
+@app.get("/gateway/config")
+async def get_gateway_config():
+    """Get active gateway configurations."""
+    return {
+        "provider": GatewayConfig.provider,
+        "model": GatewayConfig.model,
+        "max_tokens": GatewayConfig.max_tokens,
+        "cache_enabled": GatewayConfig.cache_enabled
+    }
+
+
+@app.post("/gateway/config")
+async def update_gateway_config(config: dict):
+    """Update gateway configurations at runtime."""
+    if "provider" in config:
+        GatewayConfig.provider = config["provider"]
+    if "model" in config:
+        GatewayConfig.model = config["model"]
+    if "max_tokens" in config:
+        GatewayConfig.max_tokens = int(config["max_tokens"])
+    if "cache_enabled" in config:
+        GatewayConfig.cache_enabled = config["cache_enabled"]
+        cache = get_cache_manager(enabled=False)
+        cache.enabled = config["cache_enabled"]
+        if cache.enabled and not cache.connected:
+            cache._connect()
+            
+    return {
+        "success": True,
+        "config": {
+            "provider": GatewayConfig.provider,
+            "model": GatewayConfig.model,
+            "max_tokens": GatewayConfig.max_tokens,
+            "cache_enabled": GatewayConfig.cache_enabled
+        }
     }
 
 
