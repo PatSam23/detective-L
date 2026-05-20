@@ -71,16 +71,16 @@ class CacheManager:
             self.client.ping()
             self.connected = True
             logger.info(
-                f"✓ Connected to Redis at {self.redis_host}:{self.redis_port}"
+                f"Connected to Redis at {self.redis_host}:{self.redis_port}"
             )
         except ConnectionError as e:
             self.connected = False
             logger.warning(
-                f"⚠ Redis connection failed: {e}. Caching disabled."
+                f"Redis connection failed: {e}. Caching disabled."
             )
         except Exception as e:
             self.connected = False
-            logger.error(f"✗ Redis error: {e}")
+            logger.error(f"Redis error: {e}")
 
     @staticmethod
     def _generate_cache_key(
