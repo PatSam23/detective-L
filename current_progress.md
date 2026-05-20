@@ -1,8 +1,8 @@
 # Current Progress
 
 ## Overview
-**Current Phase:** Week 4 — PostgreSQL Analytics (COMPLETE) ✅ | Ready for Week 5 — Reliability Layer 🚀
-**Status:** Core Agent Pipeline ✅ + LLM Gateway Layer ✅ + Frontend Dashboard ✅ + Redis Cache Layer ✅ + PostgreSQL Analytics ✅ + Dev Workflow Tools ✅
+**Current Phase:** Week 5 — Reliability Layer (IN PROGRESS) 🚀 | Rate Limiting Complete ✅
+**Status:** Core Agent Pipeline ✅ + LLM Gateway Layer ✅ + Frontend Dashboard ✅ + Redis Cache Layer ✅ + PostgreSQL Analytics ✅ + Dev Workflow Tools ✅ + Token Bucket Rate Limiter ✅
 
 ## Already Developed
 - *Workspace scaffolding:* Initialized `backend/` and `frontend/` folders based on Edith architectural review.
@@ -272,6 +272,16 @@
   - Configured backend task to use root `.venv` interpreter for consistency.
   - Added "Run All" compound task for one-click environment startup.
 
+- **Redis Token Bucket Rate Limiter (Week 5)** ✅ NEW
+  - `backend/app/gateway/rate_limiter.py`: Core rate limiting logic.
+    - `TokenBucketRateLimiter` class implementing the Token Bucket algorithm.
+    - Uses Redis Lua script to query, update, and check bucket capacity atomically (handles concurrent requests safely).
+    - Supports configurable `burst_size` and `requests_per_minute`.
+    - Decoupled FastAPI dependency `verify_rate_limit` that resolves client identifier from `X-API-Key`, `Authorization`, or client IP.
+    - Graceful degradation: falls back to allowing requests if Redis is offline/disabled.
+  - `backend/app/gateway/router.py`: Integrated `verify_rate_limit` dependency into `/gateway/chat`.
+  - `backend/test_rate_limiter.py`: Complete test suite validating basic capacity limits, token refills, and router integration with `TestClient` and ASCII-only logging outputs.
+
 ## Bugs / Needs Attention
 ### ✅ FIXED (Session 1)
 - Type mismatch between backend FinalReport model and frontend expectations
@@ -381,10 +391,8 @@
 
 
 ## What is Next
-- **Week 4 Completion:** Final integration testing of PostgreSQL analytics with real traffic ✅
-- **Week 5 — Reliability Layer:**
-  - Rate limiting (token bucket algorithm)
-  - Failover between providers (e.g., Gemini → OpenAI)
+- **Week 5 — Reliability Layer (Remaining Tasks):**
+  - Failover between providers (e.g., Gemini -> OpenAI)
   - Circuit breaker pattern to protect system from failing providers
   - Retry logic with exponential backoff
 
@@ -400,6 +408,7 @@ All architecture components validated successfully through **FULL END-TO-END INT
 - **Agent Pipeline:** ✅ COMPLETE - All 7 agents executing in sequence (Planner → Web Researchers → Synthesis → Critic → Revisor → Formatter)
 - **Report Generation:** ✅ DISPLAYED - Final research reports rendering with title, executive_summary, sections, sources, and confidence scores
 - **Multi-Query Testing:** ✅ VERIFIED - Tested 3 consecutive queries (Healthcare, Renewable Energy, Quantum Computing) - all completed successfully
+- **Rate Limiter Integration:** ✅ VERIFIED - Token Bucket rate limiter blocking requests successfully on excess and refilling correctly. Route returns HTTP 429 when limits are breached.
 - **End-to-End Flow:** ✅ FULLY VERIFIED
   1. User submits research query in Next.js frontend
   2. Frontend fetch successfully reaches backend (OPTIONS preflight + POST request)
@@ -411,7 +420,7 @@ All architecture components validated successfully through **FULL END-TO-END INT
   8. "New Research" button resets for next query
   9. Subsequent queries work without errors or interference
 
-**Architecture Status:** ✅ PRODUCTION-READY FOR PHASE 1 + WEEK 3 CACHING VERIFIED
+**Architecture Status:** ✅ PRODUCTION-READY FOR PHASE 1 + WEEK 3 CACHING VERIFIED + WEEK 5 RATE LIMITER VERIFIED
 
 # for my reference:
 Dependency	Purpose	In detective-L
