@@ -9,7 +9,11 @@ import os
 from app.core.graph import arun_research, astream_research, research_app
 from app.gateway.router import router as gateway_router
 from app.gateway.cache import get_cache_manager
+from app.core.llm_client import GatewayConfig
 from app.schemas import ResearchRequest, ResearchResponse
+from app.db.database import init_db, close_db, AsyncSessionLocal
+from app.db.models import LLMUsageLog
+from sqlalchemy import select, func, desc
 
 # Setup minimal file logger specifically for API entry if needed
 logger = logging.getLogger("api")
@@ -48,9 +52,13 @@ async def startup_event():
     )
     
     if cache_enabled:
-        logger.info(f"🚀 Redis Cache initialized (enabled={cache_enabled}, TTL={cache_ttl}s)")
+        logger.info(f"Redis Cache initialized (enabled={cache_enabled}, TTL={cache_ttl}s)")
     else:
-        logger.info("⚠ Redis Cache disabled")
+        logger.info("Redis Cache disabled")
+    
+    # Initialize Database
+    await init_db()
+    logger.info("PostgreSQL Analytics initialized")
 
 
 @app.on_event("shutdown")
@@ -59,6 +67,10 @@ async def shutdown_event():
     cache = get_cache_manager(enabled=False)
     cache.close()
     logger.info("🔌 Redis cache connection closed")
+    
+    # Close Database
+    await close_db()
+    logger.info("🔌 PostgreSQL connection closed")
 
 
 @app.get("/health")
@@ -75,6 +87,106 @@ async def cache_stats():
         "cache": stats,
         "message": "Cache statistics (track LLM call reduction)"
     }
+
+
+@app.post("/cache/clear")
+async def clear_cache():
+    """Clear all Redis cache entries and statistics."""
+    cache = get_cache_manager(enabled=False)
+    success = cache.clear()
+    cache.reset_stats()
+    return {
+        "success": success,
+        "message": "Cache cleared successfully" if success else "Cache clearing failed"
+    }
+
+
+@app.get("/gateway/config")
+async def get_gateway_config():
+    """Get active gateway configurations."""
+    return {
+        "provider": GatewayConfig.provider,
+        "model": GatewayConfig.model,
+        "max_tokens": GatewayConfig.max_tokens,
+        "cache_enabled": GatewayConfig.cache_enabled
+    }
+
+
+@app.post("/gateway/config")
+async def update_gateway_config(config: dict):
+    """Update gateway configurations at runtime."""
+    if "provider" in config:
+        GatewayConfig.provider = config["provider"]
+    if "model" in config:
+        GatewayConfig.model = config["model"]
+    if "max_tokens" in config:
+        GatewayConfig.max_tokens = int(config["max_tokens"])
+    if "cache_enabled" in config:
+        GatewayConfig.cache_enabled = config["cache_enabled"]
+        cache = get_cache_manager(enabled=False)
+        cache.enabled = config["cache_enabled"]
+        if cache.enabled and not cache.connected:
+            cache._connect()
+            
+    return {
+        "success": True,
+        "config": {
+            "provider": GatewayConfig.provider,
+            "model": GatewayConfig.model,
+            "max_tokens": GatewayConfig.max_tokens,
+            "cache_enabled": GatewayConfig.cache_enabled
+        }
+    }
+
+
+@app.get("/analytics/usage")
+async def get_usage_analytics():
+    """Get aggregate usage statistics from PostgreSQL."""
+    try:
+        async with AsyncSessionLocal() as session:
+            # Total requests
+            total_reqs = await session.scalar(select(func.count(LLMUsageLog.id)))
+            
+            # Cache hit rate
+            cache_hits = await session.scalar(select(func.count(LLMUsageLog.id)).where(LLMUsageLog.cache_hit == True))
+            hit_rate = (cache_hits / total_reqs * 100) if total_reqs > 0 else 0
+            
+            # Total tokens
+            total_tokens = await session.scalar(select(func.sum(LLMUsageLog.total_tokens))) or 0
+            
+            # Avg latency
+            avg_latency = await session.scalar(select(func.avg(LLMUsageLog.latency_ms))) or 0
+            
+            # Recent logs (last 10)
+            result = await session.execute(
+                select(LLMUsageLog)
+                .order_by(desc(LLMUsageLog.created_at))
+                .limit(10)
+            )
+            recent_logs = result.scalars().all()
+            
+            return {
+                "summary": {
+                    "total_requests": total_reqs,
+                    "cache_hits": cache_hits,
+                    "cache_hit_rate": f"{hit_rate:.2f}%",
+                    "total_tokens": total_tokens,
+                    "avg_latency_ms": f"{avg_latency:.2f}"
+                },
+                "recent_activity": [
+                    {
+                        "provider": log.provider,
+                        "model": log.model,
+                        "tokens": log.total_tokens,
+                        "latency": f"{log.latency_ms:.2f}ms",
+                        "cache_hit": log.cache_hit,
+                        "time": log.created_at.isoformat()
+                    } for log in recent_logs
+                ]
+            }
+    except Exception as e:
+        logger.error(f"Error fetching analytics: {e}")
+        return {"error": "Failed to fetch analytics"}
 
 
 @app.post("/research", response_model=ResearchResponse)

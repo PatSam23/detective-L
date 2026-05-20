@@ -1,5 +1,5 @@
 # Git Branching Strategy Guide
-
+ 
 ## 📋 Overview
 
 Your project now follows a **Git Flow** branching model - the industry standard for production applications. This ensures code quality, stability, and safe deployments.

@@ -14,9 +14,11 @@ load_dotenv()
 
 
 GATEWAY_BASE_URL = os.getenv("GATEWAY_BASE_URL", "http://localhost:8000")
-DEFAULT_PROVIDER = os.getenv("LLM_PROVIDER", "gemini")
-DEFAULT_MODEL = os.getenv("LLM_MODEL", "gemini-2.5-flash")
-DEFAULT_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "4096"))
+class GatewayConfig:
+    provider = os.getenv("LLM_PROVIDER", "gemini")
+    model = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+    max_tokens = int(os.getenv("LLM_MAX_TOKENS", "4096"))
+    cache_enabled = os.getenv("CACHE_ENABLED", "true").lower() == "true"
 
 
 def _message_role(message: BaseMessage) -> str:
@@ -80,16 +82,20 @@ def get_llm(
     provider: str | None = None,
     max_tokens: int | None = None,
 ) -> RunnableLambda:
-    model_name = model or DEFAULT_MODEL
-    provider_name = provider or DEFAULT_PROVIDER
-    max_output_tokens = max_tokens or DEFAULT_MAX_TOKENS
-
     def _invoke(input_value):
+        model_name = model or GatewayConfig.model
+        provider_name = provider or GatewayConfig.provider
+        max_output_tokens = max_tokens or GatewayConfig.max_tokens
+        
         messages = _normalize_messages(input_value)
         content = _call_gateway(messages, provider_name, model_name, temperature, max_output_tokens)
         return AIMessage(content=content)
 
     async def _ainvoke(input_value):
+        model_name = model or GatewayConfig.model
+        provider_name = provider or GatewayConfig.provider
+        max_output_tokens = max_tokens or GatewayConfig.max_tokens
+        
         messages = _normalize_messages(input_value)
         content = await _acall_gateway(messages, provider_name, model_name, temperature, max_output_tokens)
         return AIMessage(content=content)

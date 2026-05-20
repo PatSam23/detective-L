@@ -17,6 +17,25 @@ services:
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
 
+  postgres:
+    image: postgres:15-alpine
+    container_name: detective-l-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-detective}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=${POSTGRES_DB:-detective_analytics}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-detective} -d ${POSTGRES_DB:-detective_analytics}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
 volumes:
   redis_data:
+    driver: local
+  postgres_data:
     driver: local

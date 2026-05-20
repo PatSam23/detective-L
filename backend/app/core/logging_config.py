@@ -71,6 +71,9 @@ def setup_logging(
         console_handler.setFormatter(formatter)
         root_logger.addHandler(console_handler)
     
+    # Silence spammy third-party loggers
+    logging.getLogger("watchfiles").setLevel(logging.WARNING)
+    
     return root_logger
 
 
