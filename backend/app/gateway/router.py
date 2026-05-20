@@ -1,10 +1,11 @@
 """FastAPI router for the LLM gateway endpoint."""
 
 import logging
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from app.gateway.schemas import GatewayChatRequest, GatewayChatResponse
 from app.gateway.providers import call_provider
 from app.gateway.cache import get_cache_manager
+from app.gateway.rate_limiter import verify_rate_limit
 from app.db.database import AsyncSessionLocal
 from app.db.models import LLMUsageLog
 import time
@@ -25,7 +26,11 @@ async def log_usage_to_db(log_data: dict):
 
 
 @router.post("/gateway/chat", response_model=GatewayChatResponse)
-async def gateway_chat(request: GatewayChatRequest, background_tasks: BackgroundTasks):
+async def gateway_chat(
+    request: GatewayChatRequest,
+    background_tasks: BackgroundTasks,
+    _ = Depends(verify_rate_limit),
+):
     """
     Gateway chat endpoint with Redis caching.
 
