@@ -1,52 +1,108 @@
-"""
-LLM client configuration for Google Gemini API.
+"""LLM client configuration using the internal gateway."""
 
-Initializes and configures the LangChain ChatGoogleGenerativeAI client
-with proper settings for the detective-L system.
-"""
+from __future__ import annotations
 
 import os
-from langchain_google_genai import ChatGoogleGenerativeAI
-from dotenv import load_dotenv
+from typing import Iterable, List
 
-# Load environment variables from .env
+import httpx
+from dotenv import load_dotenv
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.runnables import RunnableLambda
+
 load_dotenv()
 
-# Get API key from environment
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-if not GEMINI_API_KEY:
-    raise ValueError(
-        "GEMINI_API_KEY not found in environment. "
-        "Please add it to backend/.env file."
-    )
-
-
-def get_llm(temperature: float = 0.7, model: str = "gemini-2.5-flash") -> ChatGoogleGenerativeAI:
-    """
-    Get configured LLM client for Gemini API.
-    
-    Args:
-        temperature: Sampling temperature (0.0-1.0). Higher = more creative.
-        model: Model name (default: gemini-2.5-flash - latest and stable)
-    
-    Returns:
-        Configured ChatGoogleGenerativeAI client
-    """
-    return ChatGoogleGenerativeAI(
-        model=model,
-        temperature=temperature,
-        api_key=GEMINI_API_KEY,
-        max_tokens=4096,
-        timeout=60,
-    )
+GATEWAY_BASE_URL = os.getenv("GATEWAY_BASE_URL", "http://localhost:8000")
+class GatewayConfig:
+    provider = os.getenv("LLM_PROVIDER", "gemini")
+    model = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+    max_tokens = int(os.getenv("LLM_MAX_TOKENS", "4096"))
+    cache_enabled = os.getenv("CACHE_ENABLED", "true").lower() == "true"
 
 
-# Create default LLM instance for single imports
+def _message_role(message: BaseMessage) -> str:
+    if isinstance(message, SystemMessage):
+        return "system"
+    if isinstance(message, HumanMessage):
+        return "user"
+    if isinstance(message, AIMessage):
+        return "assistant"
+    return getattr(message, "role", None) or getattr(message, "type", "user")
+
+
+def _normalize_messages(input_value) -> List[dict]:
+    if hasattr(input_value, "to_messages"):
+        messages: Iterable[BaseMessage] = input_value.to_messages()
+    elif isinstance(input_value, BaseMessage):
+        messages = [input_value]
+    else:
+        messages = [HumanMessage(content=str(input_value))]
+
+    payload = []
+    for message in messages:
+        payload.append({
+            "role": _message_role(message),
+            "content": message.content if isinstance(message.content, str) else str(message.content),
+        })
+    return payload
+
+
+def _gateway_payload(messages: List[dict], provider: str, model: str, temperature: float, max_tokens: int) -> dict:
+    return {
+        "provider": provider,
+        "model": model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+
+
+def _call_gateway(messages: List[dict], provider: str, model: str, temperature: float, max_tokens: int) -> str:
+    payload = _gateway_payload(messages, provider, model, temperature, max_tokens)
+    with httpx.Client(timeout=60) as client:
+        response = client.post(f"{GATEWAY_BASE_URL}/gateway/chat", json=payload)
+        response.raise_for_status()
+        data = response.json()
+    return data.get("content", "")
+
+
+async def _acall_gateway(messages: List[dict], provider: str, model: str, temperature: float, max_tokens: int) -> str:
+    payload = _gateway_payload(messages, provider, model, temperature, max_tokens)
+    async with httpx.AsyncClient(timeout=60) as client:
+        response = await client.post(f"{GATEWAY_BASE_URL}/gateway/chat", json=payload)
+        response.raise_for_status()
+        data = response.json()
+    return data.get("content", "")
+
+
+def get_llm(
+    temperature: float = 0.7,
+    model: str | None = None,
+    provider: str | None = None,
+    max_tokens: int | None = None,
+) -> RunnableLambda:
+    def _invoke(input_value):
+        model_name = model or GatewayConfig.model
+        provider_name = provider or GatewayConfig.provider
+        max_output_tokens = max_tokens or GatewayConfig.max_tokens
+        
+        messages = _normalize_messages(input_value)
+        content = _call_gateway(messages, provider_name, model_name, temperature, max_output_tokens)
+        return AIMessage(content=content)
+
+    async def _ainvoke(input_value):
+        model_name = model or GatewayConfig.model
+        provider_name = provider or GatewayConfig.provider
+        max_output_tokens = max_tokens or GatewayConfig.max_tokens
+        
+        messages = _normalize_messages(input_value)
+        content = await _acall_gateway(messages, provider_name, model_name, temperature, max_output_tokens)
+        return AIMessage(content=content)
+
+    return RunnableLambda(_invoke, afunc=_ainvoke)
+
+
 llm = get_llm(temperature=0.5)
-
-# LLM for creative tasks (brainstorming, planning)
 llm_creative = get_llm(temperature=0.8)
-
-# LLM for fact-checking (lower temp = more conservative)
 llm_strict = get_llm(temperature=0.2)
