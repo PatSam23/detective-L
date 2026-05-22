@@ -1,8 +1,8 @@
 # Current Progress
 
 ## Overview
-**Current Phase:** Week 5 — Reliability Layer (IN PROGRESS) 🚀 | Rate Limiting Complete ✅
-**Status:** Core Agent Pipeline ✅ + LLM Gateway Layer ✅ + Frontend Dashboard ✅ + Redis Cache Layer ✅ + PostgreSQL Analytics ✅ + Dev Workflow Tools ✅ + Token Bucket Rate Limiter ✅
+**Current Phase:** Week 5 — Reliability Layer Complete ✅ | Moving to Week 6 — Observability + Deployment 🚀
+**Status:** Core Agent Pipeline ✅ + LLM Gateway Layer ✅ + Frontend Dashboard ✅ + Redis Cache Layer ✅ + PostgreSQL Analytics ✅ + Dev Workflow Tools ✅ + Token Bucket Rate Limiter ✅ + Resilience Layer (Failover/Circuit Breaker/Retries) ✅
 
 ## Already Developed
 - *Workspace scaffolding:* Initialized `backend/` and `frontend/` folders based on Edith architectural review.
@@ -282,6 +282,16 @@
   - `backend/app/gateway/router.py`: Integrated `verify_rate_limit` dependency into `/gateway/chat`.
   - `backend/test_rate_limiter.py`: Complete test suite validating basic capacity limits, token refills, and router integration with `TestClient` and ASCII-only logging outputs.
 
+- **Resilience Layer (Week 5 Complete)** ✅ NEW
+  - `backend/app/gateway/resilience.py`: Core resilience module.
+    - `RedisCircuitBreaker` tracks provider health (CLOSED, OPEN, HALF_OPEN) across processes using Redis.
+    - `with_retries` asynchronous decorator implementing exponential backoff (1s, 2s, 4s, etc.) for `httpx.HTTPError`.
+  - `backend/app/gateway/providers.py`: Integrated failover mechanisms.
+    - Wrapped provider calls with `with_retries`.
+    - Implemented `call_provider_with_failover` to test providers sequentially defined by `LLM_FAILOVER_CHAIN` (e.g., gemini -> openai -> anthropic).
+  - `backend/.env`: Added explicit `LLM_FAILOVER_CHAIN` configuration.
+  - `backend/test_resilience.py`: Created test suite to validate backoff, failover sequences, and circuit breaker logic.
+
 ## Bugs / Needs Attention
 ### ✅ FIXED (Session 1)
 - Type mismatch between backend FinalReport model and frontend expectations
@@ -391,10 +401,11 @@
 
 
 ## What is Next
-- **Week 5 — Reliability Layer (Remaining Tasks):**
-  - Failover between providers (e.g., Gemini -> OpenAI)
-  - Circuit breaker pattern to protect system from failing providers
-  - Retry logic with exponential backoff
+- **Week 6 — Observability + Deployment:**
+  - Structured logging + metrics (latency, error rate, cache hit rate)
+  - Docker Compose setup for all services
+  - Multi-environment configs (.env.dev, .env.uat, .env.prod)
+  - Deployment flow: dev → uat → main with versioning
 
 ## Test Results Summary
 All architecture components validated successfully through **FULL END-TO-END INTEGRATION** testing:
@@ -420,7 +431,7 @@ All architecture components validated successfully through **FULL END-TO-END INT
   8. "New Research" button resets for next query
   9. Subsequent queries work without errors or interference
 
-**Architecture Status:** ✅ PRODUCTION-READY FOR PHASE 1 + WEEK 3 CACHING VERIFIED + WEEK 5 RATE LIMITER VERIFIED
+**Architecture Status:** ✅ PRODUCTION-READY FOR PHASE 1 + WEEK 3 CACHING VERIFIED + WEEK 5 RESILIENCE VERIFIED
 
 # for my reference:
 Dependency	Purpose	In detective-L
