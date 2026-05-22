@@ -148,7 +148,7 @@ def get_rate_limiter() -> TokenBucketRateLimiter:
         _rate_limiter = TokenBucketRateLimiter()
     return _rate_limiter
 
-
+ 
 async def verify_rate_limit(
     request: Request,
     x_api_key: Optional[str] = Header(None),
