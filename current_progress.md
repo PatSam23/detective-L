@@ -399,10 +399,17 @@
     - Also improved human message clarity: `"{report}"` → `"Format this report:\n\n{report}"`
     - **Impact:** Formatter now works without errors (fallback no longer needed), processes reports successfully
 
+- **Week 6 — Observability (Structured Logging)** ✅ NEW
+  - `backend/app/core/logging_config.py`: Refactored to use a custom `JSONFormatter`
+    - Replaced traditional text logs with JSON-structured logs for the file output (`detective-L_YYYYMMDD.log`).
+    - Added comprehensive data capture: timestamp (ISO 8601), level, logger name, module, line number, and function name.
+    - Integrated exception traceback formatting into the JSON payload automatically.
+    - Added capture for custom `extra=` fields passed to logger.
+    - Left console logger as human-readable text by default, but toggleable to JSON via `LOG_FORMAT=json` environment variable.
 
 ## What is Next
 - **Week 6 — Observability + Deployment:**
-  - Structured logging + metrics (latency, error rate, cache hit rate)
+  - Metrics (latency, error rate, cache hit rate) via Prometheus/Grafana (Optional/Next)
   - Docker Compose setup for all services
   - Multi-environment configs (.env.dev, .env.uat, .env.prod)
   - Deployment flow: dev → uat → main with versioning
@@ -431,7 +438,7 @@ All architecture components validated successfully through **FULL END-TO-END INT
   8. "New Research" button resets for next query
   9. Subsequent queries work without errors or interference
 
-**Architecture Status:** ✅ PRODUCTION-READY FOR PHASE 1 + WEEK 3 CACHING VERIFIED + WEEK 5 RESILIENCE VERIFIED
+**Architecture Status:** ✅ PRODUCTION-READY FOR PHASE 1 + WEEK 3 CACHING VERIFIED + WEEK 5 RESILIENCE VERIFIED + WEEK 6 STRUCTURED LOGS VERIFIED
 
 # for my reference:
 Dependency	Purpose	In detective-L
@@ -446,4 +453,4 @@ FastAPI	Web framework	/research/stream endpoint
 Uvicorn	ASGI server	Runs FastAPI
 python-dotenv	Env var loading	.env management
 ChromaDB	Vector search	RAG cache (optional)
-logging	Python std lib	Structured logging with file rotation
+logging	Python std lib	Structured JSON logging with file rotation
