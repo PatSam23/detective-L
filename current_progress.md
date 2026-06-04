@@ -407,12 +407,15 @@
     - Added capture for custom `extra=` fields passed to logger.
     - Left console logger as human-readable text by default, but toggleable to JSON via `LOG_FORMAT=json` environment variable.
 
+- **Week 6 — Deployment Infrastructure** ✅ NEW
+  - `backend/Dockerfile`: Created container definition for the FastAPI application.
+  - `docker-compose.yml`: Integrated `backend` service alongside `redis` and `postgres`.
+  - Multi-environment configs: created `.env.dev`, `.env.uat`, and `.env.prod`.
+
 ## What is Next
-- **Week 6 — Observability + Deployment:**
+- **Week 6 — Observability (Optional)**
   - Metrics (latency, error rate, cache hit rate) via Prometheus/Grafana (Optional/Next)
-  - Docker Compose setup for all services
-  - Multi-environment configs (.env.dev, .env.uat, .env.prod)
-  - Deployment flow: dev → uat → main with versioning
+- **Deployment & Process:** Follow branching flow (`dev` → `uat` → `main`).
 
 ## Test Results Summary
 All architecture components validated successfully through **FULL END-TO-END INTEGRATION** testing:
