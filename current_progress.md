@@ -412,9 +412,22 @@
   - `docker-compose.yml`: Integrated `backend` service alongside `redis` and `postgres`.
   - Multi-environment configs: created `.env.dev`, `.env.uat`, and `.env.prod`.
 
+- **Week 6 — Observability (Metrics)** ✅ NEW
+  - Integrated `prometheus-fastapi-instrumentator` in `backend/main.py` for automatic HTTP metrics (latency, error rates).
+  - Implemented custom application metrics using `prometheus_client` in `backend/app/gateway/cache.py` (`gateway_cache_hits_total`, `gateway_cache_misses_total`, `gateway_cache_errors_total`).
+  - Added `prometheus.yml` scrape configuration.
+  - Added `prometheus` and `grafana` services to `docker-compose.yml` for real-time visualization on port 3001.
+
+- **Week 6 — Deployment Environments** ✅ NEW
+  - Created structured environment templates: `.env.dev`, `.env.uat`, `.env.prod`.
+  - Validated `.gitignore` to ensure `.env.*` files (excluding `.env.example`) are safely ignored.
+
 ## What is Next
-- **Week 6 — Observability (Optional)**
-  - Metrics (latency, error rate, cache hit rate) via Prometheus/Grafana (Optional/Next)
+- **Infrastructure Setup (Pending Docker Installation)**
+  - Install Docker and Docker Compose on the host machine.
+  - Spin up the full infrastructure stack (`docker-compose up -d`) to enable Grafana, Prometheus, Redis, and PostgreSQL.
+- **Documentation & Final Review**
+  - Finalize README and project documentation.
 - **Deployment & Process:** Follow branching flow (`dev` → `uat` → `main`).
 
 ## Test Results Summary
