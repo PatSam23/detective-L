@@ -14,8 +14,13 @@ from typing import Optional, Dict, Any
 
 import redis
 from redis.exceptions import RedisError, ConnectionError
+from prometheus_client import Counter
 
 logger = logging.getLogger(__name__)
+
+CACHE_HITS = Counter("gateway_cache_hits_total", "Total number of cache hits")
+CACHE_MISSES = Counter("gateway_cache_misses_total", "Total number of cache misses")
+CACHE_ERRORS = Counter("gateway_cache_errors_total", "Total number of cache errors")
 
 
 class CacheManager:
@@ -131,19 +136,23 @@ class CacheManager:
 
             if value:
                 self.stats["hits"] += 1
+                CACHE_HITS.inc()
                 logger.debug(f"✓ Cache HIT: {key}")
                 return json.loads(value)
             else:
                 self.stats["misses"] += 1
+                CACHE_MISSES.inc()
                 logger.debug(f"✗ Cache MISS: {key}")
                 return None
 
         except RedisError as e:
             self.stats["errors"] += 1
+            CACHE_ERRORS.inc()
             logger.warning(f"⚠ Cache get error: {e}")
             return None
         except json.JSONDecodeError as e:
             self.stats["errors"] += 1
+            CACHE_ERRORS.inc()
             logger.warning(f"⚠ Cache value decode error: {e}")
             return None
 
@@ -182,10 +191,12 @@ class CacheManager:
 
         except RedisError as e:
             self.stats["errors"] += 1
+            CACHE_ERRORS.inc()
             logger.warning(f"⚠ Cache set error: {e}")
             return False
         except (TypeError, ValueError) as e:
             self.stats["errors"] += 1
+            CACHE_ERRORS.inc()
             logger.warning(f"⚠ Cache value encode error: {e}")
             return False
 
