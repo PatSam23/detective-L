@@ -5,7 +5,7 @@ import json
 import logging
 import asyncio
 import os
-
+ 
 from app.core.graph import arun_research, astream_research, research_app
 from app.gateway.router import router as gateway_router
 from app.gateway.cache import get_cache_manager
@@ -14,6 +14,7 @@ from app.schemas import ResearchRequest, ResearchResponse
 from app.db.database import init_db, close_db, AsyncSessionLocal
 from app.db.models import LLMUsageLog
 from sqlalchemy import select, func, desc
+from prometheus_fastapi_instrumentator import Instrumentator
 
 # Setup minimal file logger specifically for API entry if needed
 logger = logging.getLogger("api")
@@ -23,6 +24,9 @@ app = FastAPI(
     description="Multi-agent parallel research intelligence system",
     version="1.0.0"
 )
+
+# Initialize Prometheus Metrics
+Instrumentator().instrument(app).expose(app)
 
 app.include_router(gateway_router)
 

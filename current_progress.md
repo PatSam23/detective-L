@@ -1,8 +1,8 @@
 # Current Progress
 
 ## Overview
-**Current Phase:** Week 5 — Reliability Layer (IN PROGRESS) 🚀 | Rate Limiting Complete ✅
-**Status:** Core Agent Pipeline ✅ + LLM Gateway Layer ✅ + Frontend Dashboard ✅ + Redis Cache Layer ✅ + PostgreSQL Analytics ✅ + Dev Workflow Tools ✅ + Token Bucket Rate Limiter ✅
+**Current Phase:** Week 5 — Reliability Layer Complete ✅ | Moving to Week 6 — Observability + Deployment 🚀
+**Status:** Core Agent Pipeline ✅ + LLM Gateway Layer ✅ + Frontend Dashboard ✅ + Redis Cache Layer ✅ + PostgreSQL Analytics ✅ + Dev Workflow Tools ✅ + Token Bucket Rate Limiter ✅ + Resilience Layer (Failover/Circuit Breaker/Retries) ✅
 
 ## Already Developed
 - *Workspace scaffolding:* Initialized `backend/` and `frontend/` folders based on Edith architectural review.
@@ -282,6 +282,16 @@
   - `backend/app/gateway/router.py`: Integrated `verify_rate_limit` dependency into `/gateway/chat`.
   - `backend/test_rate_limiter.py`: Complete test suite validating basic capacity limits, token refills, and router integration with `TestClient` and ASCII-only logging outputs.
 
+- **Resilience Layer (Week 5 Complete)** ✅ NEW
+  - `backend/app/gateway/resilience.py`: Core resilience module.
+    - `RedisCircuitBreaker` tracks provider health (CLOSED, OPEN, HALF_OPEN) across processes using Redis.
+    - `with_retries` asynchronous decorator implementing exponential backoff (1s, 2s, 4s, etc.) for `httpx.HTTPError`.
+  - `backend/app/gateway/providers.py`: Integrated failover mechanisms.
+    - Wrapped provider calls with `with_retries`.
+    - Implemented `call_provider_with_failover` to test providers sequentially defined by `LLM_FAILOVER_CHAIN` (e.g., gemini -> openai -> anthropic).
+  - `backend/.env`: Added explicit `LLM_FAILOVER_CHAIN` configuration.
+  - `backend/test_resilience.py`: Created test suite to validate backoff, failover sequences, and circuit breaker logic.
+
 ## Bugs / Needs Attention
 ### ✅ FIXED (Session 1)
 - Type mismatch between backend FinalReport model and frontend expectations
@@ -389,12 +399,36 @@
     - Also improved human message clarity: `"{report}"` → `"Format this report:\n\n{report}"`
     - **Impact:** Formatter now works without errors (fallback no longer needed), processes reports successfully
 
+- **Week 6 — Observability (Structured Logging)** ✅ NEW
+  - `backend/app/core/logging_config.py`: Refactored to use a custom `JSONFormatter`
+    - Replaced traditional text logs with JSON-structured logs for the file output (`detective-L_YYYYMMDD.log`).
+    - Added comprehensive data capture: timestamp (ISO 8601), level, logger name, module, line number, and function name.
+    - Integrated exception traceback formatting into the JSON payload automatically.
+    - Added capture for custom `extra=` fields passed to logger.
+    - Left console logger as human-readable text by default, but toggleable to JSON via `LOG_FORMAT=json` environment variable.
+
+- **Week 6 — Deployment Infrastructure** ✅ NEW
+  - `backend/Dockerfile`: Created container definition for the FastAPI application.
+  - `docker-compose.yml`: Integrated `backend` service alongside `redis` and `postgres`.
+  - Multi-environment configs: created `.env.dev`, `.env.uat`, and `.env.prod`.
+
+- **Week 6 — Observability (Metrics)** ✅ NEW
+  - Integrated `prometheus-fastapi-instrumentator` in `backend/main.py` for automatic HTTP metrics (latency, error rates).
+  - Implemented custom application metrics using `prometheus_client` in `backend/app/gateway/cache.py` (`gateway_cache_hits_total`, `gateway_cache_misses_total`, `gateway_cache_errors_total`).
+  - Added `prometheus.yml` scrape configuration.
+  - Added `prometheus` and `grafana` services to `docker-compose.yml` for real-time visualization on port 3001.
+
+- **Week 6 — Deployment Environments** ✅ NEW
+  - Created structured environment templates: `.env.dev`, `.env.uat`, `.env.prod`.
+  - Validated `.gitignore` to ensure `.env.*` files (excluding `.env.example`) are safely ignored.
 
 ## What is Next
-- **Week 5 — Reliability Layer (Remaining Tasks):**
-  - Failover between providers (e.g., Gemini -> OpenAI)
-  - Circuit breaker pattern to protect system from failing providers
-  - Retry logic with exponential backoff
+- **Infrastructure Setup (Pending Docker Installation)**
+  - Install Docker and Docker Compose on the host machine.
+  - Spin up the full infrastructure stack (`docker-compose up -d`) to enable Grafana, Prometheus, Redis, and PostgreSQL.
+- **Documentation & Final Review**
+  - Finalize README and project documentation.
+- **Deployment & Process:** Follow branching flow (`dev` → `uat` → `main`).
 
 ## Test Results Summary
 All architecture components validated successfully through **FULL END-TO-END INTEGRATION** testing:
@@ -420,7 +454,7 @@ All architecture components validated successfully through **FULL END-TO-END INT
   8. "New Research" button resets for next query
   9. Subsequent queries work without errors or interference
 
-**Architecture Status:** ✅ PRODUCTION-READY FOR PHASE 1 + WEEK 3 CACHING VERIFIED + WEEK 5 RATE LIMITER VERIFIED
+**Architecture Status:** ✅ PRODUCTION-READY FOR PHASE 1 + WEEK 3 CACHING VERIFIED + WEEK 5 RESILIENCE VERIFIED + WEEK 6 STRUCTURED LOGS VERIFIED
 
 # for my reference:
 Dependency	Purpose	In detective-L
@@ -435,4 +469,4 @@ FastAPI	Web framework	/research/stream endpoint
 Uvicorn	ASGI server	Runs FastAPI
 python-dotenv	Env var loading	.env management
 ChromaDB	Vector search	RAG cache (optional)
-logging	Python std lib	Structured logging with file rotation
+logging	Python std lib	Structured JSON logging with file rotation

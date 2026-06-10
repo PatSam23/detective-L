@@ -4,12 +4,12 @@ Formatter Agent: Converts draft report into final structured intelligence report
 This final node takes the approved draft report and formats it into
 the structured FinalReport output with metadata and sources.
 """
-
+ 
 import logging
 from typing import List, Dict
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
-
+ 
 from app.core.llm_client import llm
 from app.core.models import FinalReport
 from app.core.state import AgentState

@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple
 import httpx
 
 from app.gateway.schemas import GatewayChatRequest, GatewayChatResponse
+from app.gateway.resilience import get_circuit_breaker, with_retries, CircuitState
 
 
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
@@ -148,7 +149,7 @@ async def _call_gemini(request: GatewayChatRequest) -> GatewayChatResponse:
     )
 
 
-async def call_provider(request: GatewayChatRequest) -> GatewayChatResponse:
+async def _call_provider_single(request: GatewayChatRequest) -> GatewayChatResponse:
     provider = request.provider.lower()
     if provider == "openai":
         return await _call_openai(request)
@@ -158,3 +159,65 @@ async def call_provider(request: GatewayChatRequest) -> GatewayChatResponse:
         return await _call_gemini(request)
 
     raise ValueError(f"Unsupported provider: {request.provider}")
+
+async def call_provider(request: GatewayChatRequest) -> GatewayChatResponse:
+    """Main entrypoint for router, maintaining backward compatibility while adding failover."""
+    return await call_provider_with_failover(request)
+
+async def call_provider_with_failover(request: GatewayChatRequest) -> GatewayChatResponse:
+    cb = get_circuit_breaker()
+    
+    # Parse failover chain from env, e.g., "gemini,openai,anthropic"
+    failover_str = os.getenv("LLM_FAILOVER_CHAIN", request.provider)
+    chain = [p.strip().lower() for p in failover_str.split(",") if p.strip()]
+    
+    # Ensure the requested provider is first in the chain
+    primary = request.provider.lower()
+    if primary in chain:
+        chain.remove(primary)
+    chain.insert(0, primary)
+    
+    errors = []
+    
+    for provider in chain:
+        if not cb.allow_request(provider):
+            errors.append(f"{provider}: Circuit is OPEN")
+            continue
+            
+        try:
+            # Rewrite request for the current provider in the chain
+            current_request = request.model_copy(update={"provider": provider})
+            
+            # Use specific default models if falling back
+            if provider != primary:
+                if provider == "openai" and "gemini" in request.model:
+                    current_request.model = "gpt-4o-mini"
+                elif provider == "anthropic" and "gemini" in request.model:
+                    current_request.model = "claude-3-haiku-20240307"
+                elif provider == "gemini" and ("gpt" in request.model or "claude" in request.model):
+                    current_request.model = "gemini-2.5-flash"
+            
+            # Execute with retries
+            response = await with_retries(
+                _call_provider_single, 
+                current_request,
+                max_retries=2, 
+                initial_backoff=1.0
+            )
+            
+            # Record success and return
+            cb.record_success(provider)
+            return response
+            
+        except httpx.HTTPError as e:
+            cb.record_failure(provider)
+            errors.append(f"{provider}: HTTP Error {str(e)}")
+            continue
+        except Exception as e:
+            # For non-HTTP errors (like missing API keys), we also record failure and continue
+            cb.record_failure(provider)
+            errors.append(f"{provider}: Error {str(e)}")
+            continue
+
+    # If we exhaust the chain, raise 500
+    raise RuntimeError(f"All providers in failover chain failed. Errors: {'; '.join(errors)}")
