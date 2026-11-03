@@ -12,7 +12,8 @@ from app.gateway.cache import get_cache_manager
 from app.core.llm_client import GatewayConfig
 from app.schemas import ResearchRequest, ResearchResponse
 from app.db.database import init_db, close_db, AsyncSessionLocal
-from app.db.models import LLMUsageLog
+from app.db.models import LLMUsageLog, EvalLog
+from app.eval.evaluator import run_and_save_eval
 from sqlalchemy import select, func, desc
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -193,6 +194,44 @@ async def get_usage_analytics():
         return {"error": "Failed to fetch analytics"}
 
 
+@app.get("/analytics/eval-scores")
+async def get_eval_analytics():
+    """Get aggregate DeepEval scores and recent evaluations from PostgreSQL."""
+    try:
+        async with AsyncSessionLocal() as session:
+            total_evals = await session.scalar(select(func.count(EvalLog.id))) or 0
+            avg_faithfulness = await session.scalar(select(func.avg(EvalLog.faithfulness_score))) or 0.0
+            avg_relevancy = await session.scalar(select(func.avg(EvalLog.relevancy_score))) or 0.0
+
+            recent = await session.execute(
+                select(EvalLog).order_by(desc(EvalLog.created_at)).limit(10)
+            )
+            recent_logs = recent.scalars().all()
+
+            return {
+                "summary": {
+                    "total_evaluations": total_evals,
+                    "avg_faithfulness": f"{avg_faithfulness:.2f}",
+                    "avg_relevancy": f"{avg_relevancy:.2f}",
+                },
+                "recent_evaluations": [
+                    {
+                        "id": log.id,
+                        "query": log.query,
+                        "faithfulness": log.faithfulness_score,
+                        "faithfulness_reason": log.faithfulness_reason,
+                        "relevancy": log.relevancy_score,
+                        "relevancy_reason": log.relevancy_reason,
+                        "time": log.created_at.isoformat(),
+                    }
+                    for log in recent_logs
+                ]
+            }
+    except Exception as e:
+        logger.error(f"Error fetching eval analytics: {e}")
+        return {"error": "Failed to fetch eval analytics"}
+
+
 @app.post("/research", response_model=ResearchResponse)
 async def run_research_sync(request: ResearchRequest):
     """
@@ -204,9 +243,16 @@ async def run_research_sync(request: ResearchRequest):
         # Run graph
         result = await arun_research(request.query, verbose=False)
         
+        final_report = result.get("final_report", {})
+        findings = result.get("research_findings", [])
+
+        # Trigger background DeepEval evaluation
+        if final_report:
+            asyncio.create_task(run_and_save_eval(request.query, final_report, findings))
+
         return ResearchResponse(
             status="success",
-            final_report=result.get("final_report", {}),
+            final_report=final_report,
             sources=result.get("sources", []),
             revision_count=result.get("revision_count", 0)
         )
@@ -226,10 +272,18 @@ async def stream_research_events(request: ResearchRequest):
     async def generate_events():
         try:
             agent_started = set()  # Track which agents have sent start event
+            captured_final_report = {}
+            captured_findings = []
             
             async for event in astream_research(request.query):
                 # Process each node in the event
                 for node_name, state_update in event.items():
+                    # Capture data for DeepEval background evaluation
+                    if "final_report" in state_update and isinstance(state_update["final_report"], dict):
+                        captured_final_report = state_update["final_report"]
+                    if "research_findings" in state_update and isinstance(state_update["research_findings"], list):
+                        captured_findings.extend(state_update["research_findings"])
+
                     # Send agent_start event on first appearance
                     if node_name not in agent_started:
                         agent_started.add(node_name)
@@ -279,6 +333,11 @@ async def stream_research_events(request: ResearchRequest):
             }
             yield f"data: {json.dumps(research_complete_payload)}\n\n"
             logger.info("Research stream completed successfully")
+
+            # Asynchronously evaluate final report with DeepEval
+            if captured_final_report:
+                asyncio.create_task(run_and_save_eval(request.query, captured_final_report, captured_findings))
+
             
         except Exception as e:
             logger.error(f"Streaming error: {e}", exc_info=True)
