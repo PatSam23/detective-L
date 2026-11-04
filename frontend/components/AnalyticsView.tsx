@@ -34,6 +34,27 @@ interface CacheStats {
   enabled: boolean;
 }
 
+interface EvalEntry {
+  id: number;
+  query: string;
+  faithfulness: number;
+  faithfulness_reason: string;
+  relevancy: number;
+  relevancy_reason: string;
+  time: string;
+}
+
+interface EvalSummary {
+  total_evaluations: number;
+  avg_faithfulness: string;
+  avg_relevancy: string;
+}
+
+interface EvalData {
+  summary: EvalSummary;
+  recent_evaluations: EvalEntry[];
+}
+
 // ── Simple SVG donut gauge ──────────────────────────────────────────
 function GaugeRing({ pct, color, label }: { pct: number; color: string; label: string }) {
   const R = 40;
@@ -125,6 +146,7 @@ function KpiCard({ label, value, sub, glowClass }: { label: string; value: strin
 export function AnalyticsView() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [cache, setCache] = useState<CacheStats | null>(null);
+  const [evalData, setEvalData] = useState<EvalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
@@ -135,12 +157,14 @@ export function AnalyticsView() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [analyticsRes, cacheRes] = await Promise.all([
+      const [analyticsRes, cacheRes, evalRes] = await Promise.all([
         fetch(`${apiUrl}/analytics/usage`),
         fetch(`${apiUrl}/cache/stats`),
+        fetch(`${apiUrl}/analytics/eval-scores`),
       ]);
       if (analyticsRes.ok) setData(await analyticsRes.json());
       if (cacheRes.ok) setCache(await cacheRes.json());
+      if (evalRes.ok) setEvalData(await evalRes.json());
       setError(null);
     } catch {
       setError('Could not connect to backend. Is the server running?');
@@ -336,6 +360,126 @@ export function AnalyticsView() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* ── DEEPEVAL AI QUALITY SECTION ── */}
+      <div className="space-y-4 pt-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              <span>🎯</span> DeepEval AI Quality &amp; Hallucination Metrics
+            </h3>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              LLM-as-a-Judge evaluation (Faithfulness &amp; Relevancy) using Gemini 2.5 Flash
+            </p>
+          </div>
+          <span className="badge badge-complete text-xs">
+            {evalData?.summary?.total_evaluations ?? 0} Evaluated
+          </span>
+        </div>
+
+        {/* DeepEval KPI Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <KpiCard
+            label="Avg Faithfulness"
+            value={evalData?.summary?.avg_faithfulness ? `${(parseFloat(evalData.summary.avg_faithfulness) * 100).toFixed(0)}%` : '—'}
+            sub="Factual grounding vs web sources"
+            glowClass="kpi-card-emerald"
+          />
+          <KpiCard
+            label="Avg Relevancy"
+            value={evalData?.summary?.avg_relevancy ? `${(parseFloat(evalData.summary.avg_relevancy) * 100).toFixed(0)}%` : '—'}
+            sub="Alignment to original query"
+            glowClass="kpi-card-cyan"
+          />
+          <KpiCard
+            label="Evaluations Logged"
+            value={evalData?.summary?.total_evaluations ?? 0}
+            sub="Stored in PostgreSQL"
+            glowClass="kpi-card-violet"
+          />
+        </div>
+
+        {/* DeepEval Recent Evals Table */}
+        <div className="glass-card overflow-hidden">
+          <div className="flex items-center justify-between p-5 pb-3">
+            <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+              Recent DeepEval Evaluations
+            </p>
+            <span className="badge badge-pending">
+              {evalData?.recent_evaluations?.length ?? 0} runs
+            </span>
+          </div>
+
+          {!evalData?.recent_evaluations || evalData.recent_evaluations.length === 0 ? (
+            <div className="p-8 text-center" style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+              No evaluations recorded yet. Run a research query in the workspace to trigger background evaluation.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Query</th>
+                    <th>Faithfulness</th>
+                    <th>Relevancy</th>
+                    <th>Judge Feedback / Reason</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evalData.recent_evaluations.map((ev) => (
+                    <tr key={ev.id}>
+                      <td className="max-w-xs">
+                        <span className="text-xs font-medium truncate block" title={ev.query} style={{ color: 'var(--text-primary)' }}>
+                          {ev.query}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className={`badge text-xs ${ev.faithfulness >= 0.7 ? 'badge-complete' : 'badge-error'}`}
+                          title={`Score: ${ev.faithfulness}`}
+                        >
+                          {(ev.faithfulness * 100).toFixed(0)}%
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className={`badge text-xs ${ev.relevancy >= 0.7 ? 'badge-complete' : 'badge-error'}`}
+                          title={`Score: ${ev.relevancy}`}
+                        >
+                          {(ev.relevancy * 100).toFixed(0)}%
+                        </span>
+                      </td>
+                      <td className="max-w-md">
+                        <div className="text-xs space-y-1" style={{ color: 'var(--text-muted)' }}>
+                          {ev.faithfulness_reason && (
+                            <p title={ev.faithfulness_reason} className="line-clamp-2">
+                              <span className="text-emerald-400 font-semibold">F:</span> {ev.faithfulness_reason}
+                            </p>
+                          )}
+                          {ev.relevancy_reason && (
+                            <p title={ev.relevancy_reason} className="line-clamp-2">
+                              <span className="text-cyan-400 font-semibold">R:</span> {ev.relevancy_reason}
+                            </p>
+                          )}
+                          {!ev.faithfulness_reason && !ev.relevancy_reason && (
+                            <span>No notes available</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                          {new Date(ev.time).toLocaleTimeString()}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
