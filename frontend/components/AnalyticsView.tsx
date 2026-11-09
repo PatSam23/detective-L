@@ -34,6 +34,19 @@ interface CacheStats {
   enabled: boolean;
 }
 
+interface SemanticCacheStats {
+  enabled: boolean;
+  semantic_hits: number;
+  total_stored: number;
+  threshold: number;
+  semantic_hit_rate_percent: number;
+}
+
+interface CacheStatsResponse {
+  cache: CacheStats;
+  semantic_cache?: SemanticCacheStats;
+}
+
 interface EvalEntry {
   id: number;
   query: string;
@@ -145,7 +158,7 @@ function KpiCard({ label, value, sub, glowClass }: { label: string; value: strin
 // ── Main component ─────────────────────────────────────────────────
 export function AnalyticsView() {
   const [data, setData] = useState<AnalyticsData | null>(null);
-  const [cache, setCache] = useState<CacheStats | null>(null);
+  const [cacheResp, setCacheResp] = useState<CacheStatsResponse | null>(null);
   const [evalData, setEvalData] = useState<EvalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -163,7 +176,7 @@ export function AnalyticsView() {
         fetch(`${apiUrl}/analytics/eval-scores`),
       ]);
       if (analyticsRes.ok) setData(await analyticsRes.json());
-      if (cacheRes.ok) setCache(await cacheRes.json());
+      if (cacheRes.ok) setCacheResp(await cacheRes.json());
       if (evalRes.ok) setEvalData(await evalRes.json());
       setError(null);
     } catch {
@@ -200,6 +213,8 @@ export function AnalyticsView() {
 
   const summary = data?.summary;
   const activity = data?.recent_activity ?? [];
+  const cache = cacheResp?.cache ?? null;
+  const semanticCache = cacheResp?.semantic_cache ?? null;
   const cacheHitPct = cache ? cache.hit_rate_percent / 100 : 0;
   const avgMs = summary ? parseFloat(summary.avg_latency_ms) : 0;
 
@@ -252,6 +267,41 @@ export function AnalyticsView() {
           glowClass="kpi-card-violet"
         />
       </div>
+
+      {/* Semantic Cache KPI Cards */}
+      {semanticCache?.enabled && (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>
+            🔮 Semantic Vector Cache (ChromaDB)
+          </p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard
+              label="Semantic Hits"
+              value={semanticCache.semantic_hits}
+              sub="Paraphrase matches"
+              glowClass="kpi-card-violet"
+            />
+            <KpiCard
+              label="Vectors Stored"
+              value={semanticCache.total_stored}
+              sub="In ChromaDB"
+              glowClass="kpi-card-blue"
+            />
+            <KpiCard
+              label="Semantic Hit Rate"
+              value={`${semanticCache.semantic_hit_rate_percent.toFixed(1)}%`}
+              sub="Of total queries"
+              glowClass="kpi-card-emerald"
+            />
+            <KpiCard
+              label="Similarity Threshold"
+              value={`≥ ${(semanticCache.threshold * 100).toFixed(0)}%`}
+              sub="Cosine similarity"
+              glowClass="kpi-card-cyan"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Gauges + Bar Chart row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

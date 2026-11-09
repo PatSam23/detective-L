@@ -9,6 +9,7 @@ import os
 from app.core.graph import arun_research, astream_research, research_app
 from app.gateway.router import router as gateway_router
 from app.gateway.cache import get_cache_manager
+from app.gateway.semantic_cache import get_semantic_cache
 from app.core.llm_client import GatewayConfig
 from app.schemas import ResearchRequest, ResearchResponse
 from app.db.database import init_db, close_db, AsyncSessionLocal
@@ -85,24 +86,42 @@ async def health_check():
 
 @app.get("/cache/stats")
 async def cache_stats():
-    """Get cache statistics (hits, misses, hit rate)."""
-    cache = get_cache_manager(enabled=False)  # Don't create new instance
-    stats = cache.get_stats()
+    """Get cache statistics (Redis + ChromaDB semantic cache)."""
+    cache = get_cache_manager(enabled=False)
+    redis_stats = cache.get_stats()
+
+    # Semantic cache stats (graceful if not initialised yet)
+    try:
+        sc = get_semantic_cache()
+        semantic_stats = sc.get_stats()
+    except Exception:
+        semantic_stats = {"enabled": False, "error": "not initialised"}
+
     return {
-        "cache": stats,
-        "message": "Cache statistics (track LLM call reduction)"
+        "cache": redis_stats,
+        "semantic_cache": semantic_stats,
+        "message": "Redis + ChromaDB semantic cache statistics",
     }
 
 
 @app.post("/cache/clear")
 async def clear_cache():
-    """Clear all Redis cache entries and statistics."""
+    """Clear all Redis + ChromaDB semantic cache entries and statistics."""
     cache = get_cache_manager(enabled=False)
-    success = cache.clear()
+    redis_ok = cache.clear()
     cache.reset_stats()
+
+    # Clear semantic cache too
+    try:
+        sc = get_semantic_cache()
+        semantic_ok = sc.clear()
+    except Exception:
+        semantic_ok = False
+
     return {
-        "success": success,
-        "message": "Cache cleared successfully" if success else "Cache clearing failed"
+        "success": redis_ok,
+        "semantic_cleared": semantic_ok,
+        "message": "Redis + ChromaDB caches cleared" if (redis_ok and semantic_ok) else "Partial clear — check logs",
     }
 
 
